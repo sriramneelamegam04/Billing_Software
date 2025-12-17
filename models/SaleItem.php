@@ -9,19 +9,22 @@ class SaleItem {
     }
 
     public function create($data) {
+
         $stmt = $this->pdo->prepare("
             INSERT INTO sale_items 
             (sale_id, product_id, variant_id, quantity, rate, amount) 
             VALUES (?,?,?,?,?,?)
         ");
+
         $stmt->execute([
             $data['sale_id'],
             $data['product_id'],
-            $data['variant_id'],
+            $data['variant_id'] ?? null,
             $data['quantity'],
             $data['rate'],
             $data['amount']
         ]);
+
         return $this->pdo->lastInsertId();
     }
 

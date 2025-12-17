@@ -16,99 +16,127 @@ if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
     exit;
 }
 
-// ✅ Auth check
+/* -------------------------------------------------
+   AUTH
+------------------------------------------------- */
 $authUser = getCurrentUser();
 if (!$authUser) {
     sendError("Unauthorized", 401);
 }
 
-// ✅ Only admin can create outlets
 if ($authUser['role'] !== 'admin') {
     sendError("Only admin can create outlets", 403);
 }
 
-// Decode and validate JSON
-$rawInput = file_get_contents('php://input');
-$input = json_decode($rawInput, true);
-if (json_last_error() !== JSON_ERROR_NONE) {
-    sendError("Invalid JSON format: " . json_last_error_msg(), 400);
+/* -------------------------------------------------
+   INPUT VALIDATION
+------------------------------------------------- */
+$input = json_decode(file_get_contents('php://input'), true);
+if (!$input) {
+    sendError("Invalid JSON payload", 400);
 }
 
-// Required fields (❌ vertical removed)
 $required = ['name', 'address', 'email', 'password'];
 foreach ($required as $field) {
-    if (!isset($input[$field]) || trim($input[$field]) === '') {
+    if (empty(trim($input[$field] ?? ''))) {
         sendError("$field is required", 422);
     }
 }
 
-// Normalize
 $name     = trim($input['name']);
 $address  = trim($input['address']);
 $email    = strtolower(trim($input['email']));
 $password = trim($input['password']);
 
-// Validate name length
 if (strlen($name) < 3) {
     sendError("Outlet name must be at least 3 characters", 422);
 }
 
-// Validate address length
 if (strlen($address) < 5) {
     sendError("Outlet address must be at least 5 characters", 422);
 }
 
-// Validate email
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    sendError("Invalid email format");
+    sendError("Invalid email format", 422);
 }
 
-// Validate password strength (basic)
 if (strlen($password) < 8) {
     sendError("Password must be at least 8 characters", 422);
 }
 
-// ✅ Vertical comes from org table (NOT from user input)
+/* -------------------------------------------------
+   ORG VERTICAL (FROM ORGS TABLE)
+------------------------------------------------- */
 $stmt = $pdo->prepare("SELECT vertical FROM orgs WHERE id=?");
 $stmt->execute([$authUser['org_id']]);
-$orgVertical = $stmt->fetchColumn();
-if (!$orgVertical) {
+$vertical = strtolower($stmt->fetchColumn());
+
+if (!$vertical) {
     sendError("Organization vertical not found", 400);
 }
-$vertical = strtolower($orgVertical);
 
-// ✅ Check active subscription
+/* -------------------------------------------------
+   SUBSCRIPTION CHECK
+------------------------------------------------- */
 $subscriptionModel = new Subscription($pdo);
 $activeSub = $subscriptionModel->getActive($authUser['org_id']);
+
 if (!$activeSub) {
-    sendError("Active subscription required to create outlet", 403);
+    sendError("Active subscription required", 403);
 }
 
-// ✅ Enforce max_outlets limit
-$currentCountStmt = $pdo->prepare("SELECT COUNT(*) FROM outlets WHERE org_id = ?");
-$currentCountStmt->execute([$authUser['org_id']]);
-$currentCount = (int)$currentCountStmt->fetchColumn();
+$max_outlets = $activeSub['max_outlets']; // NULL = unlimited, 0 = not allowed
 
-$max_outlets = $activeSub['max_outlets']; // NULL/0 => unlimited
-if (!empty($max_outlets) && $currentCount >= (int)$max_outlets) {
-    sendError("Outlet limit reached for current subscription plan", 403);
+/* -------------------------------------------------
+   ENFORCE OUTLET LIMIT (FIXED LOGIC)
+------------------------------------------------- */
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM outlets WHERE org_id=?");
+$countStmt->execute([$authUser['org_id']]);
+$currentCount = (int)$countStmt->fetchColumn();
+
+/*
+RULES:
+- max_outlets = NULL → unlimited
+- max_outlets = 0    → NO outlet allowed
+- max_outlets > 0    → enforce limit
+*/
+if ($max_outlets !== null) {
+
+    if ((int)$max_outlets === 0) {
+        sendError(
+            "Your current subscription does not allow creating outlets",
+            403
+        );
+    }
+
+    if ($currentCount >= (int)$max_outlets) {
+        sendError(
+            "Outlet limit reached for your subscription plan",
+            403
+        );
+    }
 }
 
-// ✅ Duplicate outlet name check
-$dupStmt = $pdo->prepare("SELECT id FROM outlets WHERE org_id=? AND name=? LIMIT 1");
-$dupStmt->execute([$authUser['org_id'], $name]);
-if ($dupStmt->fetch()) {
-    sendError("Outlet with this name already exists in your organization", 409);
+/* -------------------------------------------------
+   DUPLICATE CHECKS
+------------------------------------------------- */
+$dupOutlet = $pdo->prepare(
+    "SELECT id FROM outlets WHERE org_id=? AND name=? LIMIT 1"
+);
+$dupOutlet->execute([$authUser['org_id'], $name]);
+if ($dupOutlet->fetch()) {
+    sendError("Outlet with this name already exists", 409);
 }
 
-// ✅ Duplicate email check (for outlet user)
 $dupEmail = $pdo->prepare("SELECT id FROM users WHERE email=? LIMIT 1");
 $dupEmail->execute([$email]);
 if ($dupEmail->fetch()) {
-    sendError("Email already exists for another user", 409);
+    sendError("Email already exists", 409);
 }
 
-// ✅ Create outlet
+/* -------------------------------------------------
+   CREATE OUTLET
+------------------------------------------------- */
 $outletModel = new Outlet($pdo);
 $outlet_id = $outletModel->create([
     'name'     => $name,
@@ -117,25 +145,29 @@ $outlet_id = $outletModel->create([
     'org_id'   => $authUser['org_id']
 ]);
 
-// ✅ Create outlet login user (role=staff)
+/* -------------------------------------------------
+   CREATE STAFF USER
+------------------------------------------------- */
 $userModel = new User($pdo);
-$hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 $user_id = $userModel->create([
     'name'      => $name . " Admin",
     'email'     => $email,
-    'password'  => $hashedPassword,
+    'password'  => password_hash($password, PASSWORD_BCRYPT),
     'role'      => 'staff',
     'org_id'    => $authUser['org_id'],
     'outlet_id' => $outlet_id
 ]);
 
+/* -------------------------------------------------
+   RESPONSE
+------------------------------------------------- */
 sendSuccess(
     [
         'outlet_id'   => $outlet_id,
         'outlet_name' => $name,
         'user_id'     => $user_id,
-        'user_email'  => $email,
+        'email'       => $email,
         'vertical'    => $vertical
     ],
-    "Outlet and login user created successfully"
+    "Outlet created successfully"
 );

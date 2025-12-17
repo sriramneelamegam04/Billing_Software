@@ -19,18 +19,16 @@ if (!$authUser) {
     sendError("Unauthorized", 401);
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
-if (!$input || empty($input['plan'])) {
-    sendError("plan is required");
-}
-
-$plan = strtolower(trim($input['plan']));
 $org_id = (int)$authUser['org_id'];
 
-// ✅ Fetch org details
+// No plan input needed — ONLY the annual plan exists
+$plan = "annual";
+
+// Fetch org details
 $stmt = $pdo->prepare("SELECT * FROM orgs WHERE id=? AND is_verified=1");
 $stmt->execute([$org_id]);
 $org = $stmt->fetch(PDO::FETCH_ASSOC);
+
 if (!$org) {
     sendError("Organization not found or not verified");
 }
@@ -40,51 +38,28 @@ if (!$org_vertical) {
     sendError("Organization vertical is missing");
 }
 
-// ✅ Plan configuration
-$plans = [
-    'free' => [
-        'price_inr' => 0,
-        'duration' => '+7 days',
-        'max_outlets' => 1
-    ],
-    'basic' => [
-        'price_inr' => 499,
-        'duration' => '+6 months',
-        'max_outlets' => 5
-    ],
-    'premium' => [
-        'price_inr' => 1999,
-        'duration' => null, // lifetime
-        'max_outlets' => null
-    ]
+// Plan configuration (only one plan exists)
+$planConfig = [
+    'price_inr'   => 10000,
+    'duration'    => '+1 year',
+    'max_outlets' => 0
 ];
 
-if (!isset($plans[$plan])) {
-    sendError("Invalid plan. Allowed: free, basic, premium");
-}
-
-// ✅ Prevent multiple free plan renewals
+// Expire current active subscription (if exists)
 $subscriptionModel = new Subscription($pdo);
-if ($plan === 'free') {
-    $freeCheck = $subscriptionModel->getFreePlanHistory($org_id);
-    if ($freeCheck) {
-        sendError("Free plan already used. Cannot renew", 409);
-    }
-}
-
-// ✅ Expire old subscription if active
 $activeSub = $subscriptionModel->getActive($org_id);
+
 if ($activeSub) {
-    $subscriptionModel->expire($activeSub['id']);
+    $stmtExpire = $pdo->prepare("UPDATE subscriptions SET status='EXPIRED' WHERE id=?");
+    $stmtExpire->execute([$activeSub['id']]);
 }
 
-// ✅ Calculate start & expiry dates
-$config = $plans[$plan];
-$starts_at = date("Y-m-d H:i:s");
-$expires_at = $config['duration'] ? date("Y-m-d H:i:s", strtotime($config['duration'])) : null;
-$max_outlets = $config['max_outlets'];
+// Calculate dates
+$starts_at   = date("Y-m-d H:i:s");
+$expires_at  = date("Y-m-d H:i:s", strtotime($planConfig['duration']));
+$max_outlets = $planConfig['max_outlets'];
 
-// ✅ Fetch features for vertical
+// Fetch available features for vertical
 $features = [];
 try {
     $vfStmt = $pdo->prepare("
@@ -94,37 +69,13 @@ try {
         WHERE vf.vertical = ?
     ");
     $vfStmt->execute([$org_vertical]);
-    $rows = $vfStmt->fetchAll(PDO::FETCH_COLUMN);
-    if ($rows) $features = $rows;
+    $features = $vfStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
 } catch (Exception $e) {
-    // Ignore errors
+    // ignore
 }
 
-// ✅ If FREE plan → activate immediately
-if ($config['price_inr'] <= 0) {
-    $sub_id = $subscriptionModel->createImmediate([
-        'org_id' => $org_id,
-        'plan' => $plan,
-        'allowed_verticals' => json_encode([$org_vertical]),
-        'max_outlets' => $max_outlets,
-        'features' => json_encode($features),
-        'starts_at' => $starts_at,
-        'expires_at' => $expires_at,
-        'status' => 'ACTIVE'
-    ]);
-
-    sendSuccess([
-        'subscription_id' => $sub_id,
-        'plan' => $plan,
-        'status' => 'ACTIVE',
-        'starts_at' => $starts_at,
-        'expires_at' => $expires_at,
-        'features' => $features
-    ], "Subscription renewed successfully");
-}
-
-// ✅ If PAID plan → Razorpay order
-$price_inr = (int)$config['price_inr'];
+// Payment details
+$price_inr    = (int)$planConfig['price_inr'];
 $amount_paise = $price_inr * 100;
 
 if (!class_exists('\Razorpay\Api\Api')) {
@@ -133,35 +84,39 @@ if (!class_exists('\Razorpay\Api\Api')) {
 
 require_once __DIR__ . '/../../config/payments.php';
 
+// Create Razorpay order
 try {
     $api = new \Razorpay\Api\Api(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET);
 
     $order = $api->order->create([
-        'receipt' => 'renew_' . uniqid(),
-        'amount' => $amount_paise,
-        'currency' => 'INR',
+        'receipt'         => 'renew_' . uniqid(),
+        'amount'          => $amount_paise,
+        'currency'        => 'INR',
         'payment_capture' => 1
     ]);
 
+    // Create new pending subscription
     $sub_id = $subscriptionModel->createPending([
-        'org_id' => $org_id,
-        'plan' => $plan,
-        'allowed_verticals' => json_encode([$org_vertical]),
-        'max_outlets' => $max_outlets,
-        'features' => json_encode($features),
-        'starts_at' => $starts_at,
-        'expires_at' => $expires_at,
-        'status' => 'PENDING',
-        'razorpay_order_id' => $order['id']
+        'org_id'           => $org_id,
+        'plan'             => $plan,
+        'allowed_verticals'=> json_encode([$org_vertical]),
+        'max_outlets'      => $max_outlets,
+        'features'         => json_encode($features),
+        'starts_at'        => $starts_at,
+        'expires_at'       => $expires_at,
+        'status'           => 'PENDING',
+        'razorpay_order_id'=> $order['id']
     ]);
 
     sendSuccess([
         'subscription_id' => $sub_id,
-        'order_id' => $order['id'],
-        'amount' => $amount_paise,
-        'status' => 'PENDING'
-    ], "Renewal order created. Complete payment to activate subscription");
+        'order_id'        => $order['id'],
+        'amount'          => $amount_paise,
+        'status'          => 'PENDING'
+    ], "Renewal order generated. Complete payment to activate subscription");
 
 } catch (Exception $e) {
     sendError("Payment gateway error: " . $e->getMessage(), 500);
 }
+
+?>

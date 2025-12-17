@@ -9,155 +9,221 @@ require_once __DIR__.'/../../services/HookService.php';
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:3000");
-header("Access-Control-Allow-Methods: POST, PATCH , GET, OPTIONS");
+header("Access-Control-Allow-Methods: POST, PATCH, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
+if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
     http_response_code(200);
     exit;
 }
 
 $authUser = getCurrentUser();
-if(!$authUser) sendError("Unauthorized", 401);
+if (!$authUser) sendError("Unauthorized", 401);
 
-// Decode JSON input safely
-$raw = file_get_contents('php://input');
-$input = json_decode($raw, true);
-if(json_last_error() !== JSON_ERROR_NONE) {
-    sendError("Invalid JSON format: " . json_last_error_msg());
+/* -------------------------------------------------
+   PARSE INPUT
+------------------------------------------------- */
+$input = json_decode(file_get_contents("php://input"), true);
+if (json_last_error() !== JSON_ERROR_NONE) {
+    sendError("Invalid JSON");
 }
 
-if(empty($input['sale_id'])) sendError("sale_id is required");
+if (empty($input['sale_id'])) {
+    sendError("sale_id is required");
+}
+
 $sale_id = (int)$input['sale_id'];
 
-// Fetch the sale to ensure it exists and belongs to this org
-$stmt = $pdo->prepare("SELECT * FROM sales WHERE id=? AND org_id=? LIMIT 1");
+/* -------------------------------------------------
+   FETCH SALE
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT * FROM sales 
+    WHERE id=? AND org_id=? 
+    LIMIT 1
+");
 $stmt->execute([$sale_id, $authUser['org_id']]);
 $sale = $stmt->fetch(PDO::FETCH_ASSOC);
-if(!$sale) sendError("Sale not found or does not belong to your organization", 404);
 
-// Optional fields to update
-$fields = ['total_amount','discount','note','customer_id','outlet_id','items'];
+if (!$sale) sendError("Sale not found or unauthorized", 404);
+
+/* -------------------------------------------------
+   ALLOWED FIELDS
+------------------------------------------------- */
+$allowed = ['discount', 'note', 'customer_id', 'outlet_id', 'items'];
 $updateData = [];
-$params = [];
 
-// Normalize and validate input
-foreach($fields as $field){
-    if(isset($input[$field])){
-        $val = $input[$field];
-
-        switch($field){
-            case 'total_amount':
-                $val = (float)$val;
-                if($val < 0) sendError("total_amount cannot be negative");
-                break;
-
-            case 'discount':
-                $val = (float)$val;
-                if($val < 0) sendError("discount cannot be negative");
-                break;
-
-            case 'note':
-                $val = strtolower(trim($val));
-                break;
-
-            case 'customer_id':
-            case 'outlet_id':
-                $val = (int)$val;
-                break;
-
-            case 'items':
-                if(!is_array($val) || count($val)==0) sendError("items must be a non-empty array");
-                break;
-        }
-
-        $updateData[$field] = $val;
+foreach ($allowed as $f) {
+    if (array_key_exists($f, $input)) {
+        $updateData[$f] = $input[$f];
     }
 }
 
-// Validate outlet if changed
-if(isset($updateData['outlet_id'])){
-    $stmt = $pdo->prepare("SELECT id FROM outlets WHERE id=? AND org_id=? LIMIT 1");
-    $stmt->execute([$updateData['outlet_id'], $authUser['org_id']]);
-    if(!$stmt->fetch()) sendError("Invalid outlet_id or does not belong to your organization",403);
-} else {
-    $updateData['outlet_id'] = $sale['outlet_id'];
+/* -------------------------------------------------
+   OUTLET VALIDATION
+------------------------------------------------- */
+$outlet_id = $sale['outlet_id'];
+
+if (isset($updateData['outlet_id'])) {
+    $oid = (int)$updateData['outlet_id'];
+
+    $stmt = $pdo->prepare("SELECT id FROM outlets WHERE id=? AND org_id=?");
+    $stmt->execute([$oid, $authUser['org_id']]);
+    if (!$stmt->fetch()) sendError("Invalid outlet_id",403);
+
+    $outlet_id = $oid;
 }
 
-// Validate items and product IDs if items provided
-if(isset($updateData['items'])){
+/* -------------------------------------------------
+   ITEM VALIDATION + RATE + AMOUNT
+------------------------------------------------- */
+if (isset($updateData['items'])) {
+
+    if (!is_array($updateData['items']) || count($updateData['items']) === 0) {
+        sendError("items must be non-empty array");
+    }
+
     foreach ($updateData['items'] as &$item) {
+
         if (!empty($item['barcode']) && empty($item['product_id'])) {
-            $barcode = preg_replace('/\s+/', '', strval($item['barcode']));
-            $stmt = $pdo->prepare("SELECT id FROM products WHERE org_id=? AND outlet_id=? AND JSON_UNQUOTE(JSON_EXTRACT(meta,'$.barcode'))=? LIMIT 1");
-            $stmt->execute([$authUser['org_id'],$updateData['outlet_id'],$barcode]);
+            $stmt = $pdo->prepare("
+                SELECT id FROM products
+                WHERE org_id=? AND outlet_id=?
+                  AND JSON_UNQUOTE(JSON_EXTRACT(meta,'$.barcode'))=?
+            ");
+            $stmt->execute([
+                $authUser['org_id'],
+                $outlet_id,
+                trim($item['barcode'])
+            ]);
             $pid = $stmt->fetchColumn();
-            if(!$pid) sendError("Product not found for barcode: $barcode",404);
+            if (!$pid) sendError("Product not found for barcode");
             $item['product_id'] = (int)$pid;
         }
+
+        if (empty($item['product_id']) || empty($item['quantity'])) {
+            sendError("product_id & quantity required");
+        }
+
+        $item['variant_id'] = $item['variant_id'] ?? null;
+
+        if ($item['variant_id']) {
+            $stmt = $pdo->prepare("
+                SELECT v.price
+                FROM product_variants v
+                JOIN products p ON p.id=v.product_id
+                WHERE v.id=? AND p.org_id=? AND p.outlet_id=?
+            ");
+            $stmt->execute([
+                $item['variant_id'],
+                $authUser['org_id'],
+                $outlet_id
+            ]);
+            $rate = $stmt->fetchColumn();
+            if ($rate === false) sendError("Invalid variant_id");
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT price FROM products
+                WHERE id=? AND org_id=? AND outlet_id=?
+            ");
+            $stmt->execute([
+                $item['product_id'],
+                $authUser['org_id'],
+                $outlet_id
+            ]);
+            $rate = $stmt->fetchColumn();
+            if ($rate === false) sendError("Invalid product_id");
+        }
+
+        $item['rate']   = (float)$rate;
+        $item['amount'] = $item['rate'] * $item['quantity'];
     }
     unset($item);
-
-    // Ensure all products exist
-    $productIds = array_map(fn($i)=> (int)$i['product_id'], $updateData['items']);
-    if(count($productIds)==0) sendError("No valid products found in items");
-
-    $placeholders = implode(',', array_fill(0, count($productIds), '?'));
-    $paramsCheck = array_merge([$authUser['org_id'],$updateData['outlet_id']], $productIds);
-    $stmt = $pdo->prepare("SELECT id FROM products WHERE org_id=? AND outlet_id=? AND id IN ($placeholders)");
-    $stmt->execute($paramsCheck);
-    $existing = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    $missing = array_diff($productIds, $existing);
-    if(count($missing)>0) sendError("Some products do not exist in this outlet: ".implode(',',$missing));
 }
 
-// Normalize GST fields from org
-$stmt = $pdo->prepare("SELECT gstin,gst_type,gst_rate FROM orgs WHERE id=? LIMIT 1");
+/* -------------------------------------------------
+   GST FROM ORG (SOURCE OF TRUTH)s
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT gst_type, gst_rate 
+    FROM orgs 
+    WHERE id=? LIMIT 1
+");
 $stmt->execute([$authUser['org_id']]);
 $org = $stmt->fetch(PDO::FETCH_ASSOC);
-$updateData['gstin'] = $org['gstin'];
-$updateData['gst_type'] = $org['gst_type'];
-$updateData['gst_rate'] = (float)$org['gst_rate'];
 
-try{
-    // Subscription check
-    $subService = new SubscriptionService($pdo);
-    $subService->checkActive($authUser['org_id']);
+$gst_type = $org['gst_type'];
+$gst_rate = (float)$org['gst_rate'];
 
-    // Before hook
-    $vertical = $authUser['vertical'] ?? 'Generic';
-    if(method_exists('HookService','callHook')){
-        $updateData = HookService::callHook($vertical,'beforeSaleUpdate',$updateData);
+/* -------------------------------------------------
+   RECALCULATE TOTALS (SAME AS CREATE)
+------------------------------------------------- */
+$items = $updateData['items'] ?? [];
+
+if (!empty($items)) {
+    $sub_total = 0;
+    foreach ($items as $i) {
+        $sub_total += $i['amount'];
     }
+} else {
+    $stmt = $pdo->prepare("SELECT SUM(amount) FROM sale_items WHERE sale_id=?");
+    $stmt->execute([$sale_id]);
+    $sub_total = (float)$stmt->fetchColumn();
+}
 
-    // Update sale
-    $set = [];
-    $params = [];
-    foreach($updateData as $k=>$v){
-        if($k!=='items'){ // items can be stored separately via BillingService
-            $set[] = "$k=?";
-            $params[] = $v;
-        }
+$discount = isset($updateData['discount'])
+    ? (float)$updateData['discount']
+    : (float)$sale['discount'];
+
+$taxable = max(0, $sub_total - $discount);
+
+$cgst = $sgst = $igst = 0;
+
+if ($gst_rate > 0) {
+    if ($gst_type === 'CGST_SGST') {
+        $half = $gst_rate / 2;
+        $cgst = ($taxable * $half) / 100;
+        $sgst = ($taxable * $half) / 100;
+    } elseif ($gst_type === 'IGST') {
+        $igst = ($taxable * $gst_rate) / 100;
     }
-    $params[] = $sale_id;
-    $stmt = $pdo->prepare("UPDATE sales SET ".implode(',',$set)." WHERE id=? AND org_id=?");
-    $params[] = $authUser['org_id'];
-    $stmt->execute($params);
+}
 
-    // Optional: update sale items if provided
-    if(isset($updateData['items'])){
-        $billingService = new BillingService($pdo);
-        $billingService->updateSaleItems($sale_id, $updateData['items']);
-    }
+$gross     = $taxable + $cgst + $sgst + $igst;
+$round_off = round($gross) - $gross;
+$final     = round($gross);
 
-    // After hook
-    if(method_exists('HookService','callHook')){
-        $updateData['sale_id'] = $sale_id;
-        $updateData = HookService::callHook($vertical,'afterSaleUpdate',$updateData);
-    }
+/* -------------------------------------------------
+   FINAL UPDATE PAYLOAD
+------------------------------------------------- */
+$updateData = array_merge($updateData, [
+    'sub_total'   => round($sub_total,2),
+    'discount'    => round($discount,2),
+    'cgst'        => round($cgst,2),
+    'sgst'        => round($sgst,2),
+    'igst'        => round($igst,2),
+    'round_off'   => round($round_off,2),
+    'total_amount'=> $final,
+    'gst_type'    => $gst_type,
+    'gst_rate'    => $gst_rate
+]);
 
+/* -------------------------------------------------
+   SAVE
+------------------------------------------------- */
+try {
+    $pdo->beginTransaction();
+
+    (new SubscriptionService($pdo))
+        ->checkActive($authUser['org_id']);
+
+    $billing = new BillingService($pdo);
+    $billing->updateSale($authUser['org_id'], $sale_id, $sale, $updateData);
+
+    $pdo->commit();
     sendSuccess(['sale_id'=>$sale_id], "Sale updated successfully");
 
-}catch(Exception $e){
-    sendError("Failed to update sale: ".$e->getMessage());
+} catch (Exception $e) {
+    $pdo->rollBack();
+    sendError("Update failed: ".$e->getMessage());
 }

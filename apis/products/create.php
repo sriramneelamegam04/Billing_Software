@@ -2,7 +2,7 @@
 require_once __DIR__.'/../../helpers/response.php';
 require_once __DIR__.'/../../helpers/auth.php';
 require_once __DIR__.'/../../bootstrap/db.php';
-require_once __DIR__.'/../../helpers/barcode.php';   // ✅ include barcode helper
+require_once __DIR__.'/../../helpers/barcode.php';   // barcode helper
 require_once __DIR__.'/../../models/Product.php';
 require_once __DIR__.'/../../models/ProductVariant.php';
 
@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
 $authUser = getCurrentUser();
 if (!$authUser) sendError("Unauthorized", 401);
 
-// Decode JSON input
+// Decode JSON
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) {
     sendError("Invalid JSON input");
@@ -33,13 +33,12 @@ foreach ($required as $field) {
     }
 }
 
-// Normalize
+// Normalize input
 $name      = trim($input['name']);
 $price     = (float)$input['price'];
 $outlet_id = (int)$input['outlet_id'];
 $category  = isset($input['category']) ? trim($input['category']) : '';
 
-// Prepare meta (brand, size, etc.)
 $metaArr = [];
 if (isset($input['meta']) && is_array($input['meta'])) {
     $metaArr = $input['meta'];
@@ -50,7 +49,7 @@ if ($price <= 0) {
     sendError("Price must be greater than zero", 422);
 }
 
-// Validate outlet belongs to org
+// Validate outlet
 $stmt = $pdo->prepare("SELECT id FROM outlets WHERE id=? AND org_id=? LIMIT 1");
 $stmt->execute([$outlet_id, $authUser['org_id']]);
 $outlet = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -64,7 +63,7 @@ try {
     $productModel = new Product($pdo);
     $variantModel = new ProductVariant($pdo);
 
-    // First insert without barcode (because we may need product_id)
+    // Insert product (without barcode initially)
     $product_id = $productModel->create([
         'name'      => $name,
         'org_id'    => $authUser['org_id'],
@@ -74,7 +73,7 @@ try {
         'meta'      => json_encode($metaArr, JSON_UNESCAPED_UNICODE)
     ]);
 
-    // Barcode handling
+    // Generate barcode if not provided
     if (isset($input['barcode']) && trim($input['barcode']) !== '') {
         $barcode = preg_replace('/\s+/', '', $input['barcode']);
     } else {
@@ -86,7 +85,7 @@ try {
     $stmt = $pdo->prepare("UPDATE products SET meta=? WHERE id=?");
     $stmt->execute([json_encode($metaArr, JSON_UNESCAPED_UNICODE), $product_id]);
 
-    // Create variants if provided
+    // Create variants if present
     if (isset($input['variants']) && is_array($input['variants'])) {
         foreach ($input['variants'] as $v) {
             if (!isset($v['name']) || !isset($v['price'])) continue;
@@ -98,13 +97,29 @@ try {
         }
     }
 
+    // =================================================
+    //  AUTO CREATE INVENTORY ROW FOR THIS PRODUCT
+    // =================================================
+    $stmt = $pdo->prepare("
+        INSERT INTO inventory (org_id, outlet_id, product_id, quantity)
+        VALUES (?, ?, ?, 0)
+    ");
+    $stmt->execute([
+        $authUser['org_id'],
+        $outlet_id,
+        $product_id
+    ]);
+
+    // Commit transaction
     $pdo->commit();
 
     sendSuccess([
         'product_id' => $product_id,
         'barcode'    => $barcode
     ], "Product created successfully");
+
 } catch (Exception $e) {
     $pdo->rollBack();
     sendError("Failed to create product: " . $e->getMessage(), 500);
 }
+?>

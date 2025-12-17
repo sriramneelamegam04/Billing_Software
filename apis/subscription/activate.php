@@ -7,7 +7,7 @@ require_once __DIR__ . '/../../models/Subscription.php';
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:3000");
-header("Access-Control-Allow-Methods: POST, PATCH , GET, OPTIONS");
+header("Access-Control-Allow-Methods: POST, PATCH, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
 if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
@@ -22,69 +22,50 @@ if (!$input) {
 }
 
 // Required fields
-if (empty($input['org_id']) || empty($input['plan'])) {
-    sendError("org_id and plan are required");
+if (empty($input['org_id'])) {
+    sendError("org_id is required");
 }
 
 $org_id = (int)$input['org_id'];
-$plan   = strtolower(trim($input['plan']));
+$plan   = "annual";  // FIXED PLAN
 
-// ✅ Verify org exists & email verified
+// Verify org exists & email verified
 $stmt = $pdo->prepare("SELECT * FROM orgs WHERE id=? AND is_verified=1");
 $stmt->execute([$org_id]);
 $org = $stmt->fetch(PDO::FETCH_ASSOC);
+
 if (!$org) {
     sendError("Organization not found or not verified");
 }
 
-// Org vertical validation
 $org_vertical = $org['vertical'] ?? null;
 if (!$org_vertical) {
     sendError("Organization vertical is missing");
 }
 
-// ✅ Check if org already has an active subscription
+// Check if org already has an active subscription
 $subscriptionModel = new Subscription($pdo);
 $activeSub = $subscriptionModel->getActive($org_id);
 if ($activeSub) {
     sendError("Organization already has an active subscription ({$activeSub['plan']})", 409);
 }
 
-// ---- Plan config (prices in INR)
+// -------------------------------------------------------------------
+// NEW PLAN CONFIG (ONLY ONE PLAN)
+// -------------------------------------------------------------------
 $plans = [
-    'free' => [
-        'price_inr'   => 0,
-        'duration'    => '+7 days',
-        'max_outlets' => 2
-    ],
-    'basic' => [
-        'price_inr'   => 499,
-        'duration'    => '+6 months',
-        'max_outlets' => 5
-    ],
-    'premium' => [
-        'price_inr'   => 1999,
-        'duration'    => null,   // lifetime
-        'max_outlets' => null    // unlimited
+    'annual' => [
+        'price_inr'   => 10000,
+        'duration'    => '+1 year',
+        'max_outlets' => 0
     ]
 ];
 
-if (!isset($plans[$plan])) {
-    sendError("Invalid plan");
-}
-
-// ✅ Prevent multiple free plan activations
-if ($plan === 'free') {
-    $freeCheck = $subscriptionModel->getFreePlanHistory($org_id);
-    if ($freeCheck) {
-        sendError("Free plan already used", 409);
-    }
-}
+$config = $plans['annual'];
 
 // Expiry calculation
-$config     = $plans[$plan];
-$starts_at  = date("Y-m-d H:i:s");
-$expires_at = $config['duration'] ? date("Y-m-d H:i:s", strtotime($config['duration'])) : null;
+$starts_at   = date("Y-m-d H:i:s");
+$expires_at  = date("Y-m-d H:i:s", strtotime($config['duration']));
 $max_outlets = $config['max_outlets'];
 
 // ---- Derive features from vertical_features
@@ -97,37 +78,16 @@ try {
         WHERE vf.vertical = ?
     ");
     $vfStmt->execute([$org_vertical]);
-    $rows = $vfStmt->fetchAll(PDO::FETCH_COLUMN);
-    if ($rows) $features = $rows;
+    $features = $vfStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
 } catch (Exception $e) {
-    // Ignore feature errors
+    // ignore
 }
 
-// ✅ Free plan: Activate immediately
-if ($config['price_inr'] <= 0) {
-    $subData = [
-        'org_id'           => $org_id,
-        'plan'             => $plan,
-        'allowed_verticals'=> json_encode([$org_vertical]),
-        'max_outlets'      => $max_outlets,
-        'features'         => json_encode($features),
-        'starts_at'        => $starts_at,
-        'expires_at'       => $expires_at,
-        'status'           => 'ACTIVE'
-    ];
-    $sub_id = $subscriptionModel->createImmediate($subData);
-
-    sendSuccess([
-        'subscription_id' => $sub_id,
-        'status'          => 'ACTIVE',
-        'plan'            => $plan,
-        'expires_at'      => $expires_at
-    ], "Subscription activated (free)");
-}
-
-// ✅ Paid plan: Create Razorpay order
-$price_inr   = (int)$config['price_inr'];
-$amount_paise = $price_inr * 100;
+// -------------------------------------------------------------------
+// PAID PLAN → Create Razorpay Order
+// -------------------------------------------------------------------
+$price_inr     = (int)$config['price_inr'];
+$amount_paise  = $price_inr * 100;
 
 if (!class_exists('\Razorpay\Api\Api')) {
     sendError("Razorpay SDK not installed. Run: composer require razorpay/razorpay", 500);
@@ -156,6 +116,7 @@ try {
         'status'           => 'PENDING',
         'razorpay_order_id'=> $order['id']
     ];
+
     $sub_id = $subscriptionModel->createPending($subData);
 
     sendSuccess([
@@ -167,3 +128,5 @@ try {
 } catch (Exception $e) {
     sendError("Payment gateway error: " . $e->getMessage(), 500);
 }
+
+?>

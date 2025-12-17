@@ -5,184 +5,199 @@ require_once __DIR__.'/../../bootstrap/db.php';
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:3000");
-header("Access-Control-Allow-Methods: POST, PATCH , GET, OPTIONS");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
+if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
     http_response_code(200);
     exit;
 }
 
-// Require Dompdf
+// Dompdf
 require_once __DIR__ . '/../../vendor/autoload.php';
 use Dompdf\Dompdf;
 
-// ✅ Barcode helper (SVG output – avoids GD/Imagick issues)
+// Barcode helper
 require_once __DIR__ . '/../../helpers/barcode_image.php';
 
 $authUser = getCurrentUser();
 if (!$authUser) sendError("Unauthorized",401);
 
-// Decode input
+// Input
 $input = json_decode(file_get_contents('php://input'), true);
-if(!$input) sendError("Invalid JSON format");
+if(!$input) sendError("Invalid JSON");
 
-// Required fields
-$required = ['sale_id', 'outlet_id'];
-foreach($required as $f){
-    if(empty($input[$f])) sendError("$f is required");
+if (empty($input['sale_id']) || empty($input['outlet_id'])) {
+    sendError("sale_id and outlet_id required");
 }
 
 $sale_id   = (int)$input['sale_id'];
 $outlet_id = (int)$input['outlet_id'];
 
-// ---- Fetch Sale with org + outlet + customer ----
+/* ---------------- FETCH SALE ---------------- */
 $stmt = $pdo->prepare("
-    SELECT s.*, 
-           o.name as outlet_name, 
-           org.name as org_name,
-           org.gstin, org.gst_type, org.gst_rate,
-           c.name as customer_name, 
-           c.phone as customer_phone
+    SELECT s.*,
+           o.name AS outlet_name,
+           org.name AS org_name,
+           org.gstin,
+           org.gst_type,
+           org.gst_rate,
+           c.name AS customer_name,
+           c.phone AS customer_phone
     FROM sales s
     JOIN outlets o ON o.id = s.outlet_id
     JOIN orgs org ON org.id = s.org_id
     LEFT JOIN customers c ON c.id = s.customer_id
-    WHERE s.id = ? AND s.org_id = ? AND s.outlet_id = ?
+    WHERE s.id=? AND s.org_id=? AND s.outlet_id=?
 ");
 $stmt->execute([$sale_id, $authUser['org_id'], $outlet_id]);
 $sale = $stmt->fetch(PDO::FETCH_ASSOC);
-if(!$sale) sendError("Sale not found in this outlet or organization", 404);
+if(!$sale) sendError("Sale not found",404);
 
-// ---- Get next invoice no from numbering_schemes ----
-$stmtNum = $pdo->prepare("SELECT id, next_invoice_no FROM numbering_schemes WHERE org_id = ? LIMIT 1");
+/* ---------------- INVOICE NO ---------------- */
+$stmtNum = $pdo->prepare("
+    SELECT id, next_invoice_no 
+    FROM numbering_schemes 
+    WHERE org_id=? LIMIT 1
+");
 $stmtNum->execute([$authUser['org_id']]);
-$numRow = $stmtNum->fetch(PDO::FETCH_ASSOC);
+$num = $stmtNum->fetch(PDO::FETCH_ASSOC);
+if (!$num) sendError("Numbering scheme missing");
 
-if (!$numRow) {
-    sendError("Numbering scheme not set up for this org", 500);
-}
+$invoiceNo = $num['next_invoice_no'];
 
-$invoiceNo = $numRow['next_invoice_no'];
+$pdo->prepare("
+    UPDATE numbering_schemes
+    SET next_invoice_no = next_invoice_no + 1, updated_at = NOW()
+    WHERE id = ?
+")->execute([$num['id']]);
 
-// ---- Update next invoice no (increment by 1) ----
-$upd = $pdo->prepare("UPDATE numbering_schemes SET next_invoice_no = next_invoice_no + 1, updated_at = NOW() WHERE id = ?");
-$upd->execute([$numRow['id']]);
-
-// ---- Fetch Items ----
-$stmt2 = $pdo->prepare("
-    SELECT si.*, p.name as product_name 
+/* ---------------- ITEMS ---------------- */
+$stmtItems = $pdo->prepare("
+    SELECT si.*, p.name AS product_name
     FROM sale_items si
     JOIN products p ON p.id = si.product_id
-    WHERE si.sale_id = ?
+    WHERE si.sale_id=?
 ");
-$stmt2->execute([$sale_id]);
-$items = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+$stmtItems->execute([$sale_id]);
+$items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
 
-// ---- Totals ----
-$subtotal = 0;
-foreach ($items as $item) {
-    $subtotal += $item['amount'];
+/* =================================================
+   GST CALCULATION (sales/create.php SAME)
+================================================= */
+$sub_total = 0;
+foreach ($items as $i) {
+    $sub_total += (float)$i['amount'];
 }
+
 $discount = (float)($sale['discount'] ?? 0);
-$taxable  = $subtotal - $discount;
+$taxable  = max(0, $sub_total - $discount);
 
-$cgstAmt = $sgstAmt = $igstAmt = 0;
-if ($sale['gst_type'] === 'CGST_SGST') {
-    $cgstAmt = $taxable * ($sale['cgst'] / 100);
-    $sgstAmt = $taxable * ($sale['sgst'] / 100);
-} elseif ($sale['gst_type'] === 'IGST') {
-    $igstAmt = $taxable * ($sale['igst'] / 100);
+$cgst = $sgst = $igst = 0;
+$gst_rate = (float)$sale['gst_rate'];
+
+if ($gst_rate > 0) {
+    if ($sale['gst_type'] === 'CGST_SGST') {
+        $half = $gst_rate / 2;
+        $cgst = ($taxable * $half) / 100;
+        $sgst = ($taxable * $half) / 100;
+    } elseif ($sale['gst_type'] === 'IGST') {
+        $igst = ($taxable * $gst_rate) / 100;
+    }
 }
-$netTotal = $taxable + $cgstAmt + $sgstAmt + $igstAmt;
 
-// ---- Invoice-level Barcode (with numbering scheme) ----
-$invoiceCode = "INV" . str_pad($invoiceNo, 8, '0', STR_PAD_LEFT);
-$barcodeDataUri = barcodeDataUri($invoiceCode, 60, 2);
+$gross     = $taxable + $cgst + $sgst + $igst;
+$round_off = round($gross) - $gross;
+$final_amt = round($gross);
 
-// ---- Build Receipt HTML ----
+/* ---------------- BARCODE ---------------- */
+$invoiceCode = "INV".str_pad($invoiceNo, 8, '0', STR_PAD_LEFT);
+$barcode = barcodeDataUri($invoiceCode, 60, 2);
+
+/* ---------------- RECEIPT HTML ---------------- */
 $html = "
 <html>
 <head>
-    <style>
-        body { font-family: DejaVu Sans, sans-serif; font-size: 11px; text-align: center; }
-        .line { border-top: 1px dashed #000; margin: 4px 0; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        td { padding: 2px; }
-        .right { text-align: right; }
-        .left { text-align: left; }
-        .barcode { margin: 5px 0; }
-    </style>
+<style>
+body { font-family: DejaVu Sans; font-size:11px; text-align:center; }
+.line { border-top:1px dashed #000; margin:4px 0; }
+table { width:100%; border-collapse:collapse; }
+td { padding:2px; }
+.right { text-align:right; }
+.left { text-align:left; }
+</style>
 </head>
 <body>
-    <h3>".strtoupper($sale['org_name'])."</h3>
-    <p>Outlet: {$sale['outlet_name']}</p>
-    <p>GSTIN: ".($sale['gstin'] ?? 'N/A')."</p>
-    <p>Invoice: {$invoiceCode}<br/>Date: {$sale['created_at']}</p>
-    <div class='barcode'>
-        <img src='".$barcodeDataUri."' alt='barcode'/><br>
-        <small>".$invoiceCode."</small>
-    </div>
-    <div class='line'></div>
-    <div class='left'>
-        <strong>Customer:</strong> ".htmlspecialchars($sale['customer_name'] ?? 'N/A')."<br>
-        <strong>Phone:</strong> ".htmlspecialchars($sale['customer_phone'] ?? 'N/A')."
-    </div>
-    <div class='line'></div>
-    <table>
-        <tr>
-            <td class='left'><b>Item</b></td>
-            <td>Qty</td>
-            <td>Rate</td>
-            <td class='right'>Total</td>
-        </tr>";
 
-foreach ($items as $item) {
-    $lineTotal = $item['amount'];
+<h3>".strtoupper($sale['org_name'])."</h3>
+<div>{$sale['outlet_name']}</div>
+<div>GSTIN: {$sale['gstin']}</div>
+<div>Invoice: {$invoiceCode}</div>
+<div>Date: {$sale['created_at']}</div>
+
+<img src='{$barcode}'><br>
+<small>{$invoiceCode}</small>
+
+<div class='line'></div>
+
+<div class='left'>
+<b>Customer:</b> ".($sale['customer_name'] ?? 'N/A')."<br>
+<b>Phone:</b> ".($sale['customer_phone'] ?? 'N/A')."
+</div>
+
+<div class='line'></div>
+
+<table>
+<tr>
+<td class='left'><b>Item</b></td>
+<td>Qty</td>
+<td>Rate</td>
+<td class='right'>Total</td>
+</tr>";
+
+foreach ($items as $i) {
     $html .= "
-        <tr>
-            <td class='left'>{$item['product_name']}</td>
-            <td>{$item['quantity']}</td>
-            <td>".number_format($item['rate'],2)."</td>
-            <td class='right'>".number_format($lineTotal,2)."</td>
-        </tr>";
+    <tr>
+        <td class='left'>{$i['product_name']}</td>
+        <td>{$i['quantity']}</td>
+        <td>".number_format($i['rate'],2)."</td>
+        <td class='right'>".number_format($i['amount'],2)."</td>
+    </tr>";
 }
 
 $html .= "
-        <tr><td colspan='3' class='right'><b>Subtotal</b></td><td class='right'>".number_format($subtotal,2)."</td></tr>
-        <tr><td colspan='3' class='right'>Discount</td><td class='right'>".number_format($discount,2)."</td></tr>
-        <tr><td colspan='3' class='right'><b>Taxable</b></td><td class='right'>".number_format($taxable,2)."</td></tr>";
+<tr><td colspan='3' class='right'>Sub Total</td><td class='right'>".number_format($sub_total,2)."</td></tr>
+<tr><td colspan='3' class='right'>Discount</td><td class='right'>".number_format($discount,2)."</td></tr>
+<tr><td colspan='3' class='right'><b>Taxable</b></td><td class='right'><b>".number_format($taxable,2)."</b></td></tr>";
 
-if ($cgstAmt > 0 || $sgstAmt > 0) {
-    $html .= "
-        <tr><td colspan='3' class='right'>CGST ({$sale['cgst']}%)</td><td class='right'>".number_format($cgstAmt,2)."</td></tr>
-        <tr><td colspan='3' class='right'>SGST ({$sale['sgst']}%)</td><td class='right'>".number_format($sgstAmt,2)."</td></tr>";
-} elseif ($igstAmt > 0) {
-    $html .= "
-        <tr><td colspan='3' class='right'>IGST ({$sale['igst']}%)</td><td class='right'>".number_format($igstAmt,2)."</td></tr>";
+if ($cgst > 0) {
+    $html .= "<tr><td colspan='3' class='right'>CGST (".($gst_rate/2)."%)</td><td class='right'>".number_format($cgst,2)."</td></tr>";
+}
+if ($sgst > 0) {
+    $html .= "<tr><td colspan='3' class='right'>SGST (".($gst_rate/2)."%)</td><td class='right'>".number_format($sgst,2)."</td></tr>";
+}
+if ($igst > 0) {
+    $html .= "<tr><td colspan='3' class='right'>IGST ({$gst_rate}%)</td><td class='right'>".number_format($igst,2)."</td></tr>";
 }
 
 $html .= "
-        <tr><td colspan='3' class='right'><b>Grand Total</b></td><td class='right'><b>".number_format($netTotal,2)."</b></td></tr>
-    </table>
-    <div class='line'></div>
-    <p>Thank you! Visit again</p>
+<tr><td colspan='3' class='right'>Round Off</td><td class='right'>".number_format($round_off,2)."</td></tr>
+<tr><td colspan='3' class='right'><b>Grand Total</b></td><td class='right'><b>".number_format($final_amt,2)."</b></td></tr>
+</table>
+
+<div class='line'></div>
+<p>Thank you! Visit again</p>
+
 </body>
-</html>
-";
+</html>";
 
-// ---- Generate PDF (80mm roll paper) ----
-$dompdf = new Dompdf();
-$dompdf->loadHtml($html);
-$dompdf->setPaper([0,0,226.77,600], 'portrait'); // 80mm width
-$dompdf->render();
+/* ---------------- PDF (80mm) ---------------- */
+$pdf = new Dompdf();
+$pdf->loadHtml($html);
+$pdf->setPaper([0,0,226.77,600], 'portrait');
+$pdf->render();
 
-$pdfData = $dompdf->output();
-
-// ---- Force download ----
-header('Content-Type: application/pdf');
-header('Content-Disposition: attachment; filename="receipt_'.$invoiceCode.'.pdf"');
-header('Content-Length: ' . strlen($pdfData));
-
-echo $pdfData;
+header("Content-Type: application/pdf");
+header("Content-Disposition: attachment; filename=receipt_{$invoiceCode}.pdf");
+echo $pdf->output();
 exit;

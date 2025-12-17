@@ -1,0 +1,2687 @@
+{
+	"info": {
+		"_postman_id": "e463d3a0-35ef-449a-b3a9-b0151ff09cd8",
+		"name": "billing_software",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "47150003",
+		"_collection_link": "https://security-explorer-66566915-7987225.postman.co/workspace/Sriram-Neelamegam's-Workspace~4bbbac3b-83b0-40bd-8e96-a3401c510945/collection/47150003-e463d3a0-35ef-449a-b3a9-b0151ff09cd8?action=share&source=collection_link&creator=47150003"
+	},
+	"item": [
+		{
+			"name": "org",
+			"item": [
+				{
+					"name": "create.php",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"My Test Org\",\r\n  \"email\": \"orgtest@example.com\",\r\n  \"phone\": \"9876543210\",\r\n  \"vertical\": \"retail\",\r\n  \"gstin\": \"29ABCDE1234F2Z5\",\r\n  \"gst_type\": \"CGST_SGST\",\r\n  \"gst_rate\": 18\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/org/create.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"org",
+								"create.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update.php",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{   \r\n    \"id\": 5,\r\n    \"name\": \"Qads Corporation\",\r\n    \"email\": \"Abc@gmail.com\",\r\n    \"vertical\": \"supermarket\",\r\n    \"phone\": \"9876543244\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/org/update.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"org",
+								"update.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "search.php",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/org/search.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"org",
+								"search.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete.php",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n \"id\": 1\r\n\r\n }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/org/delete.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"org",
+								"delete.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "view.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTcwNjc2NDAsIm5iZiI6MTc1NzA2NzY0MCwiZXhwIjoxNzU3MTU0MDQwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo3LCJvcmdfaWQiOjYsInJvbGUiOiJhZG1pbiJ9.Hh34pF1gXpcslkflDpUE4E1TJYVEyjaEccmA3KZEGEA",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"id\" : 6\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/org/view.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"org",
+								"view.php"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "auth",
+			"item": [
+				{
+					"name": "verify_email.php",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/auth/verify_email.php?token=eabc60bb6c2df4956ae8454ba80703d2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"auth",
+								"verify_email.php"
+							],
+							"query": [
+								{
+									"key": "token",
+									"value": "eabc60bb6c2df4956ae8454ba80703d2"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "register.php",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"try pandren\",\r\n  \"email\": \"try@example.com\",\r\n  \"password\": \"Admin@1234\",\r\n  \"org_id\": 9\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/auth/register.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"auth",
+								"register.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "login.php",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \r\n  \"email\": \"branch2@example.com\",\r\n  \"password\": \"StrongPass@1123\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/auth/login.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"auth",
+								"login.php"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "subscription",
+			"item": [
+				{
+					"name": "activate.php",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n\r\n    \"org_id\": \"10\",\r\n    \"plan\": \"free\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/subscription/activate.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"subscription",
+								"activate.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "status.php",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"org_id\" : 5\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/subscription/status.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"subscription",
+								"status.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "renew.php",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/subscription/renew.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"subscription",
+								"renew.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "verify_payment.php",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/subscription/verify_payment.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"subscription",
+								"verify_payment.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "view.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTcwNjc2NDAsIm5iZiI6MTc1NzA2NzY0MCwiZXhwIjoxNzU3MTU0MDQwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo3LCJvcmdfaWQiOjYsInJvbGUiOiJhZG1pbiJ9.Hh34pF1gXpcslkflDpUE4E1TJYVEyjaEccmA3KZEGEA",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"id\" : 5\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/subscription/view.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"subscription",
+								"view.php"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "outlets",
+			"item": [
+				{
+					"name": "create.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTgxNzc2OTgsIm5iZiI6MTc1ODE3NzY5OCwiZXhwIjoxNzU4MjY0MDk4LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxMiwib3JnX2lkIjoxMCwicm9sZSI6ImFkbWluIn0.QSOmlBeo7zMxVUR0SmJZQsZ28OuyeATz99UA2waOUPg",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"KK Nagar\",\r\n  \"address\": \"No.123, KK Nagar, kumbakkonam\",\r\n  \"email\": \"branch2@example.com\",\r\n  \"password\": \"StrongPass@1123\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/outlets/create.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"outlets",
+								"create.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"outlet_id\": 4,\r\n  \"name\": \"Qads Store\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/outlets/update.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"outlets",
+								"update.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "search.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/outlets/search.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"outlets",
+								"search.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/outlets/delete.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"outlets",
+								"delete.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "view.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTcwNjc2NDAsIm5iZiI6MTc1NzA2NzY0MCwiZXhwIjoxNzU3MTU0MDQwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo3LCJvcmdfaWQiOjYsInJvbGUiOiJhZG1pbiJ9.Hh34pF1gXpcslkflDpUE4E1TJYVEyjaEccmA3KZEGEA",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"id\" : 5\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/outlets/view.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"outlets",
+								"view.php"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "products",
+			"item": [
+				{
+					"name": "variant",
+					"item": [
+						{
+							"name": "add.php",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"product_id\": 22,\r\n    \"name\": \"5KG Pack\",\r\n    \"price\": 250\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost/billing_backend_fixed/apis/products/variant/add.php",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"path": [
+										"billing_backend_fixed",
+										"apis",
+										"products",
+										"variant",
+										"add.php"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "list.php",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "http://localhost/billing_backend_fixed/apis/products/variant/list.php?product_id=22&page=1&limit=10",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"path": [
+										"billing_backend_fixed",
+										"apis",
+										"products",
+										"variant",
+										"list.php"
+									],
+									"query": [
+										{
+											"key": "product_id",
+											"value": "22"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "view.php",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "http://localhost/billing_backend_fixed/apis/products/variant/view.php?variant_id=8",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"path": [
+										"billing_backend_fixed",
+										"apis",
+										"products",
+										"variant",
+										"view.php"
+									],
+									"query": [
+										{
+											"key": "variant_id",
+											"value": "8"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update.php",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"variant_id\": 7,\r\n    \"name\": \"1KG Pack\",\r\n    \"price\": 130\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost/billing_backend_fixed/apis/products/variant/update.php",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"path": [
+										"billing_backend_fixed",
+										"apis",
+										"products",
+										"variant",
+										"update.php"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "delete.php",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+											"type": "string"
+										}
+									]
+								},
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"variant_id\": 10\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost/billing_backend_fixed/apis/products/variant/delete.php",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"path": [
+										"billing_backend_fixed",
+										"apis",
+										"products",
+										"variant",
+										"delete.php"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "create.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"anil vermnichilli\",\r\n  \"price\": 30,\r\n  \"outlet_id\": 17,\r\n  \"category\": \"foods\",\r\n  \"meta\": {\r\n    \"barcode\": \"8901234567899\"\r\n  },\r\n  \"variants\": [\r\n    {\r\n      \"name\": \"Small Pack\",\r\n      \"price\": 15\r\n    },\r\n    {\r\n      \"name\": \"Family Pack\",\r\n      \"price\": 115\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/products/create.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"products",
+								"create.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"product_id\": 14,\r\n  \"outlet_id\": 4,\r\n  \"name\": \"Coca Cola\",\r\n  \"price\": 40\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/products/update.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"products",
+								"update.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"product_id\": 15,\r\n  \"outlet_id\": 4\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/products/delete.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"products",
+								"delete.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "search.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/products/search.php?outlet_id=4&q=c",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"products",
+								"search.php"
+							],
+							"query": [
+								{
+									"key": "outlet_id",
+									"value": "4"
+								},
+								{
+									"key": "q",
+									"value": "c"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_by_barcode.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY4OTk3MTQsIm5iZiI6MTc1Njg5OTcxNCwiZXhwIjoxNzU2OTg2MTE0LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo3LCJvcmdfaWQiOjYsInJvbGUiOiJhZG1pbiJ9.btBfx_rq_jLdKJnLj3Q9B69wXsiBmGIu58oFL4rRQtw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n \"outlet_id\" : \"5\",\r\n \"barcode\" : \"8900060001721\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/products/get_by_barcode.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"products",
+								"get_by_barcode.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "view.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTcwNjc2NDAsIm5iZiI6MTc1NzA2NzY0MCwiZXhwIjoxNzU3MTU0MDQwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo3LCJvcmdfaWQiOjYsInJvbGUiOiJhZG1pbiJ9.Hh34pF1gXpcslkflDpUE4E1TJYVEyjaEccmA3KZEGEA",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"barcode\": \"8900060001721\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/products/view.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"products",
+								"view.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "import_csv.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/C:/Users/dheer/Downloads/products_import_sample_billpro360.csv"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/products/import_csv.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"products",
+								"import_csv.php"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "sales",
+			"item": [
+				{
+					"name": "create.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"outlet_id\": 17,\r\n  \"customer_id\": 5,\r\n  \"discount\": 5,\r\n  \"items\": [\r\n    {\r\n      \"product_id\": 23,\r\n      \"variant_id\": 12,\r\n      \"quantity\": 1\r\n      \r\n    },\r\n    {\r\n      \"product_id\": 25,\r\n      \"variant_id\": 13,\r\n      \"quantity\": 3\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/sales/create.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"sales",
+								"create.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "search.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/sales/search.php?outlet_id=4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"sales",
+								"search.php"
+							],
+							"query": [
+								{
+									"key": "outlet_id",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"sale_id\": 35\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/sales/delete.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"sales",
+								"delete.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "view.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTcwNjc2NDAsIm5iZiI6MTc1NzA2NzY0MCwiZXhwIjoxNzU3MTU0MDQwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo3LCJvcmdfaWQiOjYsInJvbGUiOiJhZG1pbiJ9.Hh34pF1gXpcslkflDpUE4E1TJYVEyjaEccmA3KZEGEA",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"id\": 30\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/sales/view.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"sales",
+								"view.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"sale_id\": 36,\r\n  \"items\": [\r\n    {\r\n      \"product_id\": 22,\r\n      \"variant_id\": 7,\r\n      \"quantity\": 2,\r\n      \"rate\": 130,\r\n      \"amount\": 260\r\n    }\r\n  ],\r\n  \"total_amount\": 260,\r\n  \"discount\": 0\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/sales/update.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"sales",
+								"update.php"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "customers",
+			"item": [
+				{
+					"name": "add.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY4ODMwMTcsIm5iZiI6MTc1Njg4MzAxNywiZXhwIjoxNzU2OTY5NDE3LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo3LCJvcmdfaWQiOjYsInJvbGUiOiJhZG1pbiJ9.aO37R8bYahgzvB8syRYXLxEjHMoYoZl22Vz70eI3F3w",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Ragul\",\r\n  \"phone\": \"99999999999\",\r\n  \"outlet_id\": 5\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/customers/add.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"customers",
+								"add.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"id\": 2,\r\n  \"name\": \"Qds\",\r\n  \"phone\": \"9876501234\",\r\n  \"outlet_id\": 4\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/customers/update.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"customers",
+								"update.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"id\": 12,\r\n  \"outlet_id\": 4\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/customers/delete.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"customers",
+								"delete.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "search_cus.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/customers/search_cus.php?outlet_id=4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"customers",
+								"search_cus.php"
+							],
+							"query": [
+								{
+									"key": "outlet_id",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "view.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTcwNjc2NDAsIm5iZiI6MTc1NzA2NzY0MCwiZXhwIjoxNzU3MTU0MDQwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo3LCJvcmdfaWQiOjYsInJvbGUiOiJhZG1pbiJ9.Hh34pF1gXpcslkflDpUE4E1TJYVEyjaEccmA3KZEGEA",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"id\": 3\r\n}"
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/customers/view.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"customers",
+								"view.php"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "payments",
+			"item": [
+				{
+					"name": "delete.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"payment_id\": 12\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/payments/delete.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"payments",
+								"delete.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "search.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/payments/search.php?outlet_id=4",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"payments",
+								"search.php"
+							],
+							"query": [
+								{
+									"key": "outlet_id",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "view.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTcwNjc2NDAsIm5iZiI6MTc1NzA2NzY0MCwiZXhwIjoxNzU3MTU0MDQwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo3LCJvcmdfaWQiOjYsInJvbGUiOiJhZG1pbiJ9.Hh34pF1gXpcslkflDpUE4E1TJYVEyjaEccmA3KZEGEA",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"id\" : 5\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/payments/view.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"payments",
+								"view.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"sale_id\": 50,\r\n  \"payment_mode\": \"cash\",\r\n  \"redeemed_points\": 6.00,\r\n  \"meta\": {\r\n    \"note\": \"Paid at counter\"\r\n  }\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/payments/create.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"payments",
+								"create.php"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "loyalty_points",
+			"item": [
+				{
+					"name": "balance.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTY3OTYxNjUsIm5iZiI6MTc1Njc5NjE2NSwiZXhwIjoxNzU2ODgyNTY1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo2LCJvcmdfaWQiOjUsInJvbGUiOiJhZG1pbiJ9.H-WSQNmfGy0a-ws5Gu36y6n-Y8pocX2irMzTtrzNVPs",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"customer_id\": 2,\r\n  \"outlet_id\": 4\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/loyalty_points/balance.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"loyalty_points",
+								"balance.php"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "invoices",
+			"item": [
+				{
+					"name": "generate.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"sale_id\": 50,\r\n  \"outlet_id\": 17\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/invoices/generate.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"invoices",
+								"generate.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "receipt.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"sale_id\": 50,\r\n  \"outlet_id\": 17\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/invoices/receipt.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"invoices",
+								"receipt.php"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "reports",
+			"item": [
+				{
+					"name": "dashboard.php",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/reports/dashboard.php?org_id=11",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"reports",
+								"dashboard.php"
+							],
+							"query": [
+								{
+									"key": "org_id",
+									"value": "11"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "sales_summary.php",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var template = `\r",
+									"<canvas id=\"salesChart\" height=\"75\"></canvas>\r",
+									"\r",
+									"<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js\"></script> \r",
+									"\r",
+									"<script>\r",
+									"    var ctx = document.getElementById(\"salesChart\");\r",
+									"\r",
+									"    var salesChart = new Chart(ctx, {\r",
+									"        type: \"bar\",\r",
+									"        data: {\r",
+									"            labels: [\"Bills\", \"Items Quantity\", \"Items Amount\", \"Discount\", \"Collections\"],\r",
+									"            datasets: [{\r",
+									"                data: [],\r",
+									"                backgroundColor: [\"#003f5c\", \"#58508d\", \"#bc5090\", \"#ff6361\", \"#ffa600\"],\r",
+									"            }]\r",
+									"        },\r",
+									"        options: {\r",
+									"            legend: { display: false },\r",
+									"            title: {\r",
+									"                display: true,\r",
+									"                text: 'Sales Summary'\r",
+									"            },\r",
+									"            scales: {\r",
+									"                xAxes: [{\r",
+									"                    display: true,\r",
+									"                    scaleLabel: {\r",
+									"                        display: true,\r",
+									"                        labelString: 'Metrics'\r",
+									"                    }\r",
+									"                }],\r",
+									"                yAxes: [{\r",
+									"                    display: true,\r",
+									"                    scaleLabel: {\r",
+									"                        display: true,\r",
+									"                        labelString: 'Values'\r",
+									"                    }\r",
+									"                }]\r",
+									"            }\r",
+									"        }\r",
+									"\r",
+									"    });\r",
+									"\r",
+									"    pm.getData(function (err, value) {\r",
+									"        salesChart.data.datasets[0].data = [\r",
+									"            value.response.message.totals.bills,\r",
+									"            value.response.message.totals.items_qty,\r",
+									"            value.response.message.totals.items_amount,\r",
+									"            value.response.message.totals.discount,\r",
+									"            value.response.message.totals.collections\r",
+									"        ];\r",
+									"        salesChart.update();\r",
+									"    });\r",
+									"\r",
+									"</script>`;\r",
+									"\r",
+									"function constructVisualizerPayload() {\r",
+									"    var res = pm.response.json();\r",
+									"  \r",
+									"    return {response: res};\r",
+									"}\r",
+									"\r",
+									"pm.visualizer.set(template, constructVisualizerPayload());"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/reports/sales_summary.php?org_id=11&outlet_id=17",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"reports",
+								"sales_summary.php"
+							],
+							"query": [
+								{
+									"key": "org_id",
+									"value": "11"
+								},
+								{
+									"key": "outlet_id",
+									"value": "17"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "inventory_report.php",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var template = `\r",
+									"<canvas id=\"myChart\" height=\"75\"></canvas>\r",
+									"\r",
+									"<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js\"></script> \r",
+									"\r",
+									"<script>\r",
+									"    var ctx = document.getElementById(\"myChart\");\r",
+									"\r",
+									"    var myChart = new Chart(ctx, {\r",
+									"        type: \"line\",\r",
+									"        data: {\r",
+									"            labels: [],\r",
+									"            datasets: [{\r",
+									"                label: 'Sold Quantity',\r",
+									"                data: [],\r",
+									"                borderColor: 'rgba(75, 192, 192, 1)',\r",
+									"                borderWidth: 1,\r",
+									"                fill: false\r",
+									"            }]\r",
+									"        },\r",
+									"        options: {\r",
+									"            legend: { display: true },\r",
+									"            title: {\r",
+									"                display: true,\r",
+									"                text: 'Sold Quantity Over Time'\r",
+									"            },\r",
+									"            scales: {\r",
+									"                xAxes: [{\r",
+									"                    display: true,\r",
+									"                    scaleLabel: {\r",
+									"                        display: true,\r",
+									"                        labelString: 'Products'\r",
+									"                    }\r",
+									"                }],\r",
+									"                yAxes: [{\r",
+									"                    display: true,\r",
+									"                    scaleLabel: {\r",
+									"                        display: true,\r",
+									"                        labelString: 'Quantity Sold'\r",
+									"                    }\r",
+									"                }]\r",
+									"            }\r",
+									"        }\r",
+									"    });\r",
+									"\r",
+									"    pm.getData(function (err, value) {\r",
+									"        myChart.data.datasets[0].data = value.response.data.rows.map(row => row.sold_qty);\r",
+									"        myChart.data.labels = value.response.data.rows.map(row => row.name);\r",
+									"        myChart.update();\r",
+									"    });\r",
+									"\r",
+									"</script>`;\r",
+									"\r",
+									"function constructVisualizerPayload() {\r",
+									"    var res = pm.response.json();\r",
+									"    \r",
+									"    var visualizerData = {\r",
+									"        rows: res.message.rows\r",
+									"    };\r",
+									"\r",
+									"    return {response: visualizerData};\r",
+									"}\r",
+									"\r",
+									"pm.visualizer.set(template, constructVisualizerPayload());"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n \"outlet_id\" : \"5\",\r\n \"barcode\" : \"8900060001721\"\r\n}"
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/reports/inventory_report.php?org_id=11",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"reports",
+								"inventory_report.php"
+							],
+							"query": [
+								{
+									"key": "org_id",
+									"value": "11"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "top_products",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var template = `\r",
+									"<canvas id=\"myDonutChart\" height=\"75\"></canvas>\r",
+									"\r",
+									"<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js\"></script> \r",
+									"\r",
+									"<script>\r",
+									"    var ctx = document.getElementById(\"myDonutChart\");\r",
+									"\r",
+									"    var myDonutChart = new Chart(ctx, {\r",
+									"        type: \"doughnut\",\r",
+									"        data: {\r",
+									"            labels: [],\r",
+									"            datasets: [{\r",
+									"                data: [],\r",
+									"                backgroundColor: [\"#003f5c\", \"#58508d\", \"#bc5090\", \"#ff6361\", \"#ffa600\"],\r",
+									"            }]\r",
+									"        },\r",
+									"        options: {\r",
+									"            title: {\r",
+									"                display: true,\r",
+									"                text: 'Share of Total Sales'\r",
+									"            }\r",
+									"        }\r",
+									"    });\r",
+									"\r",
+									"    pm.getData(function (err, value) {\r",
+									"        myDonutChart.data.datasets[0].data = value.response.data;\r",
+									"        myDonutChart.data.labels = value.response.labels;\r",
+									"        myDonutChart.update();\r",
+									"    });\r",
+									"</script>`;\r",
+									"\r",
+									"function constructVisualizerPayload() {\r",
+									"    var res = pm.response.json();\r",
+									"    var visualizerData = {\r",
+									"        labels: [],\r",
+									"        data: []\r",
+									"    };\r",
+									"\r",
+									"    res.message.rows.forEach(function(row) {\r",
+									"        visualizerData.labels.push(row.product_name);\r",
+									"        visualizerData.data.push(row.total_amount);\r",
+									"    });\r",
+									"\r",
+									"    return { response: visualizerData };\r",
+									"}\r",
+									"\r",
+									"pm.visualizer.set(template, constructVisualizerPayload());"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/reports/top_products.php?org_id=11&limit=17",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"reports",
+								"top_products.php"
+							],
+							"query": [
+								{
+									"key": "org_id",
+									"value": "11"
+								},
+								{
+									"key": "limit",
+									"value": "17"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "profit_loss.php",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var template = `\r",
+									"<canvas id=\"myChart\" height=\"75\"></canvas>\r",
+									"\r",
+									"<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js\"></script> \r",
+									"\r",
+									"<script>\r",
+									"    var ctx = document.getElementById(\"myChart\");\r",
+									"\r",
+									"    var myChart = new Chart(ctx, {\r",
+									"        type: \"bar\",\r",
+									"        data: {\r",
+									"            labels: [],\r",
+									"            datasets: [{\r",
+									"                label: 'Items Amount',\r",
+									"                data: [],\r",
+									"                backgroundColor: 'rgba(255, 99, 132, 0.2)',\r",
+									"                borderColor: 'rgba(255, 99, 132, 1)',\r",
+									"                borderWidth: 1\r",
+									"            }, {\r",
+									"                label: 'Discount',\r",
+									"                data: [],\r",
+									"                backgroundColor: 'rgba(54, 162, 235, 0.2)',\r",
+									"                borderColor: 'rgba(54, 162, 235, 1)',\r",
+									"                borderWidth: 1\r",
+									"            }, {\r",
+									"                label: 'Net Sales',\r",
+									"                data: [],\r",
+									"                backgroundColor: 'rgba(255, 206, 86, 0.2)',\r",
+									"                borderColor: 'rgba(255, 206, 86, 1)',\r",
+									"                borderWidth: 1\r",
+									"            }, {\r",
+									"                label: 'Collections',\r",
+									"                data: [],\r",
+									"                backgroundColor: 'rgba(75, 192, 192, 0.2)',\r",
+									"                borderColor: 'rgba(75, 192, 192, 1)',\r",
+									"                borderWidth: 1\r",
+									"            }, {\r",
+									"                label: 'Outstanding',\r",
+									"                data: [],\r",
+									"                backgroundColor: 'rgba(153, 102, 255, 0.2)',\r",
+									"                borderColor: 'rgba(153, 102, 255, 1)',\r",
+									"                borderWidth: 1\r",
+									"            }]\r",
+									"        },\r",
+									"        options: {\r",
+									"            scales: {\r",
+									"                xAxes: [{\r",
+									"                    stacked: true,\r",
+									"                    scaleLabel: {\r",
+									"                        display: true,\r",
+									"                        labelString: 'Outlet Name'\r",
+									"                    }\r",
+									"                }],\r",
+									"                yAxes: [{\r",
+									"                    stacked: true,\r",
+									"                    scaleLabel: {\r",
+									"                        display: true,\r",
+									"                        labelString: 'Amount'\r",
+									"                    }\r",
+									"                }]\r",
+									"            }\r",
+									"        }\r",
+									"    });\r",
+									"\r",
+									"    pm.getData(function (err, value) {\r",
+									"        myChart.data.labels = value.response.message.rows.map(row => row.outlet_name);\r",
+									"        myChart.data.datasets[0].data = value.response.message.rows.map(row => row.items_amount);\r",
+									"        myChart.data.datasets[1].data = value.response.message.rows.map(row => row.discount);\r",
+									"        myChart.data.datasets[2].data = value.response.message.rows.map(row => row.net_sales);\r",
+									"        myChart.data.datasets[3].data = value.response.message.rows.map(row => row.collections);\r",
+									"        myChart.data.datasets[4].data = value.response.message.rows.map(row => row.outstanding);\r",
+									"        myChart.update();\r",
+									"    });\r",
+									"\r",
+									"</script>`;\r",
+									"\r",
+									"function constructVisualizerPayload() {\r",
+									"    var res = pm.response.json();\r",
+									"    \r",
+									"    return {response: res};\r",
+									"}\r",
+									"\r",
+									"pm.visualizer.set(template, constructVisualizerPayload());"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/reports/profit_loss.php?org_id=11",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"reports",
+								"profit_loss.php"
+							],
+							"query": [
+								{
+									"key": "org_id",
+									"value": "11"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "customer_report.php",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var template = `\r",
+									"<canvas id=\"myPieChart\" height=\"75\"></canvas>\r",
+									"\r",
+									"<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js\"></script> \r",
+									"\r",
+									"<script>\r",
+									"    var ctx = document.getElementById(\"myPieChart\");\r",
+									"\r",
+									"    var myPieChart = new Chart(ctx, {\r",
+									"        type: \"pie\",\r",
+									"        data: {\r",
+									"            labels: [\"Customers\", \"Bills\", \"Items Total\", \"Collections\", \"Outstanding\"],\r",
+									"            datasets: [{\r",
+									"                data: [],\r",
+									"                backgroundColor: [\"#003f5c\", \"#58508d\", \"#bc5090\", \"#ff6361\", \"#ffa600\"],\r",
+									"            }]\r",
+									"        },\r",
+									"        options: {\r",
+									"            legend: { display: true },\r",
+									"            title: {\r",
+									"                display: true,\r",
+									"                text: 'Customer Report Summary'\r",
+									"            }\r",
+									"        }\r",
+									"    });\r",
+									"\r",
+									"    pm.getData(function (err, value) {\r",
+									"        myPieChart.data.datasets[0].data = [\r",
+									"            value.response.message.totals.customers,\r",
+									"            value.response.message.totals.bills,\r",
+									"            value.response.message.totals.items_total,\r",
+									"            value.response.message.totals.collections,\r",
+									"            value.response.message.totals.outstanding\r",
+									"        ];\r",
+									"        myPieChart.update();\r",
+									"    });\r",
+									"</script>`;\r",
+									"\r",
+									"function constructVisualizerPayload() {\r",
+									"    var res = pm.response.json();\r",
+									"    \r",
+									"    return {response: res};\r",
+									"}\r",
+									"\r",
+									"pm.visualizer.set(template, constructVisualizerPayload());"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/reports/customer_report.php?org_id=11&outlet_id=17",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"reports",
+								"customer_report.php"
+							],
+							"query": [
+								{
+									"key": "org_id",
+									"value": "11"
+								},
+								{
+									"key": "outlet_id",
+									"value": "17"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "inventory",
+			"item": [
+				{
+					"name": "add.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"product_id\": 22,\r\n  \"variant_id\": 7,\r\n  \"outlet_id\": 6,\r\n  \"quantity\": 25,\r\n  \"note\": \"variant stock update\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/inventory/add.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"inventory",
+								"add.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "reduce.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"product_id\": 22,\r\n  \"variant_id\": 7,\r\n  \"outlet_id\": 6,\r\n  \"quantity\": 5,\r\n  \"note\": \"expiry removal\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/inventory/reduce.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"inventory",
+								"reduce.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"product_id\": 22,\r\n  \"variant_id\": 7,\r\n  \"outlet_id\": 6,\r\n  \"quantity\": 10,\r\n  \"mode\": \"reduce\",\r\n  \"note\": \"damaged items\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/inventory/update.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"inventory",
+								"update.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "history.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "/inventory/history.php?outlet_id=6\r\n✔ 2. Product-wise history\r\n\r\n/inventory/history.php?outlet_id=6&product_id=19\r\n✔ 3. Date range\r\n\r\n/inventory/history.php?outlet_id=6&from_date=2025-01-01&to_date=2025-01-31\r\n✔ 4. Filter by type\r\n\r\n/inventory/history.php?outlet_id=6&type=sale\r\n/inventory/history.php?outlet_id=6&type=manual_in\r\n/inventory/history.php?outlet_id=6&type=purchase\r\n✔ 5. Pagination\r\n\r\n/inventory/history.php?outlet_id=6&page=2&limit=20\r\n✔ 6. Summary\r\n\r\n/inventory/history.php?outlet_id=6&summary=yes",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/inventory/history.php?outlet_id=6&product_id=22",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"inventory",
+								"history.php"
+							],
+							"query": [
+								{
+									"key": "outlet_id",
+									"value": "6"
+								},
+								{
+									"key": "product_id",
+									"value": "22"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "bulk_update_stock.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "/C:/Users/dheer/Downloads/bulk_variant_stock_sample.csv"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/inventory/bulk_update_stock.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"inventory",
+								"bulk_update_stock.php"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

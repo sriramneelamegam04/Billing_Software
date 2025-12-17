@@ -4,136 +4,190 @@ require_once __DIR__.'/../../helpers/auth.php';
 require_once __DIR__.'/../../helpers/validation.php';
 require_once __DIR__.'/../../bootstrap/db.php';
 require_once __DIR__.'/../../models/Payment.php';
-require_once __DIR__.'/../../models/Sale.php';
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:3000");
-header("Access-Control-Allow-Methods: POST, PATCH , GET, OPTIONS");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
+if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
     http_response_code(200);
     exit;
 }
 
+/* -------------------------------------------------
+   AUTH
+------------------------------------------------- */
 $authUser = getCurrentUser();
-if(!$authUser) sendError("Unauthorized", 401);
+if (!$authUser) sendError("Unauthorized", 401);
 
-// ✅ Decode JSON safely
-$raw = file_get_contents('php://input');
-$input = json_decode($raw, true);
-if(json_last_error() !== JSON_ERROR_NONE) {
-    sendError("Invalid JSON format: " . json_last_error_msg());
-}
+/* -------------------------------------------------
+   Parse JSON
+------------------------------------------------- */
+$input = json_decode(file_get_contents("php://input"), true);
+if (!$input) sendError("Invalid JSON");
 
-// ✅ Required fields
-$required = ['sale_id','amount','payment_mode','outlet_id','customer_id'];
-foreach($required as $field){
-    if(!isset($input[$field]) || $input[$field]==='') {
-        sendError("$field is required");
+/* -------------------------------------------------
+   Required Fields (MINIMAL – LIKE sales/create.php)
+------------------------------------------------- */
+foreach (['sale_id','payment_mode'] as $f) {
+    if (!isset($input[$f]) || $input[$f] === '') {
+        sendError("$f is required");
     }
 }
 
-$sale_id   = (int)$input['sale_id'];
-$outlet_id = (int)$input['outlet_id'];
+$sale_id      = (int)$input['sale_id'];
+$payment_mode = trim($input['payment_mode']);
+$meta_input   = $input['meta'] ?? [];
 
-// ✅ Validate sale exists in this org + outlet
-$stmt = $pdo->prepare("SELECT id,total_amount,discount,cgst,sgst,igst,customer_id,status 
-                       FROM sales WHERE id=? AND org_id=? AND outlet_id=? LIMIT 1");
-$stmt->execute([$sale_id, $authUser['org_id'], $outlet_id]);
+/* -------------------------------------------------
+   FETCH SALE (SINGLE SOURCE OF TRUTH)
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT 
+        s.id,
+        s.org_id,
+        s.outlet_id,
+        s.customer_id,
+        s.total_amount,
+        s.discount,
+        s.cgst,
+        s.sgst,
+        s.igst,
+        s.status,
+        o.vertical
+    FROM sales s
+    JOIN outlets o ON o.id = s.outlet_id
+    WHERE s.id=? AND s.org_id=?
+    LIMIT 1
+");
+$stmt->execute([$sale_id, $authUser['org_id']]);
 $sale = $stmt->fetch(PDO::FETCH_ASSOC);
-if(!$sale) sendError("Sale not found or does not belong to this outlet/org", 404);
 
-// ✅ Check if already paid
-if((int)$sale['status'] === 1){
-    sendError("Payment already completed for this sale",409);
+if (!$sale) {
+    sendError("Sale not found or does not belong to your organization", 404);
 }
 
+/* -------------------------------------------------
+   CHECK IF ALREADY PAID
+------------------------------------------------- */
+if ((int)$sale['status'] === 1) {
+    sendError("Payment already completed for this sale", 409);
+}
+
+/* -------------------------------------------------
+   CALCULATIONS (FROM SALE)
+------------------------------------------------- */
+$original_amount = (float)$sale['total_amount'];
+$final_amount    = $original_amount;
+
+$vertical       = strtolower($sale['vertical'] ?? 'generic');
+$redeem_points  = 0;
+$redeem_value   = 0;
+
+/* -------------------------------------------------
+   LOYALTY REDEMPTION (OPTIONAL – SAME PATTERN)
+------------------------------------------------- */
+if ($vertical !== 'restaurant' && isset($meta_input['redeem_points'])) {
+
+    $redeem_points = (float)$meta_input['redeem_points'];
+
+    if ($redeem_points > 0) {
+
+        // Fetch balance
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(points_earned - points_redeemed),0)
+            FROM loyalty_points
+            WHERE org_id=? AND customer_id=?
+        ");
+        $stmt->execute([
+            $sale['org_id'],
+            $sale['customer_id']
+        ]);
+        $balance = (float)$stmt->fetchColumn();
+
+        if ($redeem_points > $balance) {
+            sendError("Insufficient loyalty points. Available: $balance");
+        }
+
+        $redeem_value = $redeem_points; // ₹1 per point
+        $final_amount = max(0, $original_amount - $redeem_value);
+    }
+}
+
+/* -------------------------------------------------
+   MAIN TRANSACTION
+------------------------------------------------- */
 try {
     $pdo->beginTransaction();
 
-    $originalAmount = (float)$input['amount'];
-    $redeemPoints   = isset($input['redeem_points']) ? (float)$input['redeem_points'] : 0;
-    $redeemValue    = 0;
-    $finalAmount    = $originalAmount;
-
-    $vertical = strtolower($authUser['vertical'] ?? 'generic');
-
-    // 🔹 Loyalty redemption (skip if restaurant)
-    if ($vertical !== 'restaurant' && $redeemPoints > 0) {
-        // Check customer balance
-        $stmt = $pdo->prepare("
-            SELECT COALESCE(SUM(points_earned - points_redeemed),0) as balance
-            FROM loyalty_points
-            WHERE customer_id = ? AND org_id = ?
-        ");
-        $stmt->execute([$input['customer_id'], $authUser['org_id']]);
-        $balance = (float)$stmt->fetchColumn();
-
-        if ($redeemPoints > $balance) {
-            throw new Exception("Insufficient loyalty points. Available: $balance");
-        }
-
-        // Reduce final amount
-        $redeemValue = $redeemPoints; // 1 point = ₹1
-        $finalAmount = max(0, $originalAmount - $redeemValue);
-
-        // Insert redemption record
-        $stmt2 = $pdo->prepare("
-            INSERT INTO loyalty_points (org_id,outlet_id,customer_id,sale_id,points_earned,points_redeemed)
-            VALUES (?,?,?,?,?,?)
-        ");
-        $stmt2->execute([
-            $authUser['org_id'],
-            $outlet_id,
-            $input['customer_id'],
-            $sale_id,
-            0,
-            $redeemPoints
-        ]);
-    }
-
-    // 🔹 Insert payment
+    /* -------------------------
+       INSERT PAYMENT
+    ------------------------- */
     $paymentModel = new Payment($pdo);
     $payment_id = $paymentModel->create([
         'sale_id'      => $sale_id,
-        'org_id'       => $authUser['org_id'],
-        'outlet_id'    => $outlet_id,
-        'amount'       => $finalAmount,
-        'payment_mode' => $input['payment_mode'],
+        'org_id'       => $sale['org_id'],
+        'outlet_id'    => $sale['outlet_id'],
+        'amount'       => $final_amount,
+        'payment_mode' => $payment_mode,
         'meta'         => json_encode([
-            'original_amount' => $originalAmount,
-            'redeem_points'   => $redeemPoints,
-            'redeem_value'    => $redeemValue,
+            'original_amount' => $original_amount,
+            'redeem_points'   => $redeem_points,
+            'redeem_value'    => $redeem_value,
+            'user_meta'       => $meta_input,
             'gst' => [
                 'cgst' => $sale['cgst'],
                 'sgst' => $sale['sgst'],
                 'igst' => $sale['igst']
             ]
-        ])
+        ], JSON_UNESCAPED_UNICODE)
     ]);
 
-    // 🔹 Update sale status → paid (1)
-    $upd = $pdo->prepare("UPDATE sales SET status = 1, customer_id = ? WHERE id = ?");
-    $upd->execute([$input['customer_id'], $sale_id]);
+    /* -------------------------
+       INSERT LOYALTY REDEEM
+    ------------------------- */
+    if ($redeem_points > 0) {
+        $stmt = $pdo->prepare("
+            INSERT INTO loyalty_points
+            (org_id,outlet_id,customer_id,sale_id,points_earned,points_redeemed)
+            VALUES (?,?,?,?,0,?)
+        ");
+        $stmt->execute([
+            $sale['org_id'],
+            $sale['outlet_id'],
+            $sale['customer_id'],
+            $sale_id,
+            $redeem_points
+        ]);
+    }
+
+    /* -------------------------
+       UPDATE SALE → PAID
+    ------------------------- */
+    $stmt = $pdo->prepare("
+        UPDATE sales SET status=1 WHERE id=?
+    ");
+    $stmt->execute([$sale_id]);
 
     $pdo->commit();
 
-    sendSuccess([
-        'payment_id'      => $payment_id,
-        'sale_id'         => $sale_id,
-        'original_amount' => $originalAmount,
-        'redeemed_points' => ($vertical !== 'restaurant') ? $redeemPoints : 0,
-        'redeem_value'    => ($vertical !== 'restaurant') ? $redeemValue : 0,
-        'final_amount'    => $finalAmount,
-        'gst'             => [
-            'cgst' => $sale['cgst'],
-            'sgst' => $sale['sgst'],
-            'igst' => $sale['igst']
-        ]
-    ], "Payment created successfully and sale marked as paid");
+    /* -------------------------
+       RESPONSE (CLEAN – OPTION 1 GST)
+       ------------------------- */
 
-} catch(Exception $e) {
+   sendSuccess([
+    'payment_id'      => $payment_id,
+    'sale_id'         => $sale_id,
+    'payment_mode'    => $payment_mode,
+    'original_amount' => round($original_amount,2),
+    'redeemed_points' => $redeem_points,
+    'redeem_value'    => round($redeem_value,2),
+    'final_amount'    => round($final_amount,2),
+    'status'          => 'PAID'
+], "Payment created successfully");
+
+} catch (Exception $e) {
     $pdo->rollBack();
-    sendError("Error: ".$e->getMessage());
+    sendError("Failed: ".$e->getMessage());
 }

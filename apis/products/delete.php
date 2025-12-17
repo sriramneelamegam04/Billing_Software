@@ -25,21 +25,21 @@ if (!$input || empty($input['product_id']) || empty($input['outlet_id'])) {
 $product_id = (int)$input['product_id'];
 $outlet_id  = (int)$input['outlet_id'];
 
-// ✅ Check if outlet belongs to the org
+// Validate outlet
 $stmt = $pdo->prepare("SELECT id FROM outlets WHERE id=? AND org_id=?");
 $stmt->execute([$outlet_id, $authUser['org_id']]);
 if (!$stmt->fetch()) {
-    sendError("Invalid outlet_id or it does not belong to your organization", 403);
+    sendError("Invalid outlet_id or outlet does not belong to your organization", 403);
 }
 
-// ✅ Check if product exists under this outlet and org
+// Validate product exists
 $stmt = $pdo->prepare("SELECT id FROM products WHERE id=? AND outlet_id=? AND org_id=?");
 $stmt->execute([$product_id, $outlet_id, $authUser['org_id']]);
 if (!$stmt->fetch()) {
-    sendError("Product not found under the given outlet", 404);
+    sendError("Product not found under this outlet", 404);
 }
 
-// ✅ Check if product is linked to sales
+// Prevent deletion if linked to sales
 $salesCheck = $pdo->prepare("SELECT COUNT(*) FROM sale_items WHERE product_id=?");
 $salesCheck->execute([$product_id]);
 if ($salesCheck->fetchColumn() > 0) {
@@ -49,7 +49,28 @@ if ($salesCheck->fetchColumn() > 0) {
 try {
     $pdo->beginTransaction();
 
-    // Delete product variants first
+    // Check current stock before delete
+    $stmt = $pdo->prepare("SELECT quantity FROM inventory WHERE product_id=? AND outlet_id=? AND org_id=?");
+    $stmt->execute([$product_id, $outlet_id, $authUser['org_id']]);
+    $stock = (float)$stmt->fetchColumn();
+
+    // Delete inventory row
+    $invDel = $pdo->prepare("DELETE FROM inventory WHERE product_id=? AND outlet_id=? AND org_id=?");
+    $invDel->execute([$product_id, $outlet_id, $authUser['org_id']]);
+
+    // Insert log for product deletion (optional audit)
+    $log = $pdo->prepare("
+        INSERT INTO inventory_logs (org_id, outlet_id, product_id, change_type, quantity_change, reference_id)
+        VALUES (?, ?, ?, 'manual_adjustment', ?, NULL)
+    ");
+    $log->execute([
+        $authUser['org_id'],
+        $outlet_id,
+        $product_id,
+        -$stock   // remove remaining stock from record
+    ]);
+
+    // Delete all variants
     $stmt = $pdo->prepare("DELETE FROM product_variants WHERE product_id=?");
     $stmt->execute([$product_id]);
 
@@ -59,7 +80,9 @@ try {
 
     $pdo->commit();
     sendSuccess([], "Product deleted successfully");
+
 } catch (Exception $e) {
     $pdo->rollBack();
     sendError("Failed to delete product: " . $e->getMessage(), 500);
 }
+?>
