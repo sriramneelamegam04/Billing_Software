@@ -4,6 +4,8 @@ require_once __DIR__ . '/../../helpers/validation.php';
 require_once __DIR__ . '/../../bootstrap/db.php';
 require_once __DIR__ . '/../../models/User.php';
 require_once __DIR__ . '/../../config/jwt.php';
+require_once __DIR__ . '/../../models/Subscription.php';
+require_once __DIR__.'/../../services/SubscriptionService.php';
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:3000");
@@ -14,6 +16,14 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
     http_response_code(200);
     exit;
 }
+
+// ✅ Method validation
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(["success" => false, "msg" => "Method Not Allowed. Use POST"]);
+    exit;
+}
+
 
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) sendError("Invalid JSON body");

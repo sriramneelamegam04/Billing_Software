@@ -12,6 +12,13 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
     exit;
 }
 
+// ✅ Method validation
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(["success" => false, "msg" => "Method Not Allowed. Use DELETE"]);
+    exit;
+}
+
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input || empty($input['id'])) {
     sendError("Field 'id' is required");

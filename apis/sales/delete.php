@@ -4,6 +4,8 @@ require_once __DIR__.'/../../helpers/auth.php';
 require_once __DIR__.'/../../bootstrap/db.php';
 require_once __DIR__.'/../../services/HookService.php';
 require_once __DIR__.'/../../services/BillingService.php';
+require_once __DIR__.'/../../services/SubscriptionService.php';
+require_once __DIR__.'/../../models/Subscription.php';
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:3000");
@@ -15,27 +17,38 @@ if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    sendError("Method Not Allowed. Use POST", 405);
+}
+
+/* -------------------------------------------------
+   AUTH + SUBSCRIPTION
+------------------------------------------------- */
 $authUser = getCurrentUser();
 if (!$authUser) sendError("Unauthorized", 401);
 
-// -----------------------------------------------------
-// Input validation
-// -----------------------------------------------------
-$input = json_decode(file_get_contents("php://input"), true);
+$subscriptionModel = new Subscription($pdo);
+if (!$subscriptionModel->getActive($authUser['org_id'])) {
+    sendError("Active subscription required", 403);
+}
 
+/* -------------------------------------------------
+   INPUT
+------------------------------------------------- */
+$input = json_decode(file_get_contents("php://input"), true);
 if (!$input || empty($input['sale_id'])) {
     sendError("sale_id is required", 422);
 }
 
 $sale_id = (int)$input['sale_id'];
 
-// -----------------------------------------------------
-// Validate sale belongs to this org
-// -----------------------------------------------------
+/* -------------------------------------------------
+   VALIDATE SALE (ORG SAFE)
+------------------------------------------------- */
 $stmt = $pdo->prepare("
-    SELECT id, outlet_id 
-    FROM sales 
-    WHERE id=? AND org_id=? 
+    SELECT id, outlet_id, total_amount, customer_id, created_at
+    FROM sales
+    WHERE id = ? AND org_id = ?
     LIMIT 1
 ");
 $stmt->execute([$sale_id, $authUser['org_id']]);
@@ -48,56 +61,67 @@ if (!$sale) {
 $outlet_id = (int)$sale['outlet_id'];
 
 try {
-
     $pdo->beginTransaction();
 
-    // -----------------------------------------------------
-    // Fetch sale items for response (variant included)
-    // -----------------------------------------------------
+    /* -------------------------------------------------
+       FETCH SALE ITEMS (BEFORE DELETE)
+    ------------------------------------------------- */
     $stmt = $pdo->prepare("
-        SELECT product_id, variant_id, quantity, rate, amount 
+        SELECT
+            product_id,
+            variant_id,
+            quantity,
+            rate,
+            taxable_amount,
+            cgst,
+            sgst,
+            igst,
+            amount
         FROM sale_items
-        WHERE sale_id=?
+        WHERE sale_id = ?
     ");
     $stmt->execute([$sale_id]);
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // -----------------------------------------------------
-    // PRE HOOK
-    // -----------------------------------------------------
+    /* -------------------------------------------------
+       PRE DELETE HOOK
+    ------------------------------------------------- */
     $vertical = $authUser['vertical'] ?? 'Generic';
-    if (method_exists('HookService','callHook')) {
+    if (method_exists('HookService', 'callHook')) {
         HookService::callHook($vertical, 'beforeSaleDelete', [
             "sale_id" => $sale_id,
-            "org_id"  => $authUser['org_id']
+            "org_id"  => $authUser['org_id'],
+            "items"   => $items
         ]);
     }
 
-    // -----------------------------------------------------
-    // Main delete process (BillingService handles triggers)
-    // -----------------------------------------------------
-    $billing = new BillingService($pdo);
-    $billing->deleteSale($authUser['org_id'], $sale_id);
+    /* -------------------------------------------------
+       MAIN DELETE (SERVICE HANDLES INVENTORY + LOYALTY)
+    ------------------------------------------------- */
+    $billingService = new BillingService($pdo);
+    $billingService->deleteSale($authUser['org_id'], $sale_id);
 
     $pdo->commit();
 
-    // -----------------------------------------------------
-    // POST HOOK
-    // -----------------------------------------------------
-    if (method_exists('HookService','callHook')) {
+    /* -------------------------------------------------
+       POST DELETE HOOK
+    ------------------------------------------------- */
+    if (method_exists('HookService', 'callHook')) {
         HookService::callHook($vertical, 'afterSaleDelete', [
             "sale_id" => $sale_id,
             "org_id"  => $authUser['org_id']
         ]);
     }
 
-    // -----------------------------------------------------
-    // Clean response
-    // -----------------------------------------------------
+    /* -------------------------------------------------
+       CLEAN RESPONSE
+    ------------------------------------------------- */
     sendSuccess([
-        "sale_id"   => $sale_id,
-        "outlet_id" => $outlet_id,
-        "items"     => $items
+        "sale_id"     => $sale_id,
+        "outlet_id"   => $outlet_id,
+        "customer_id" => (int)$sale['customer_id'],
+        "total_amount"=> (float)$sale['total_amount'],
+        "items"       => $items
     ], "Sale deleted successfully");
 
 } catch (Exception $e) {
@@ -106,7 +130,5 @@ try {
         $pdo->rollBack();
     }
 
-    sendError("Failed to delete sale: " . $e->getMessage());
+    sendError("Failed to delete sale: " . $e->getMessage(), 500);
 }
-
-?>

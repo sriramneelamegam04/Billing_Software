@@ -14,6 +14,12 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
     exit;
 }
 
+// ✅ Method validation
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(["success" => false, "msg" => "Method Not Allowed. Use POST"]);
+    exit;
+}
 // Razorpay sends either JSON (webhook) or POST form params (checkout)
 $input = file_get_contents('php://input');
 $data = json_decode($input, true);

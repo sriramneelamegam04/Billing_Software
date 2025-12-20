@@ -13,6 +13,13 @@ if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
     exit;
 }
 
+// ✅ Method validation
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+    http_response_code(405);
+    echo json_encode(["success" => false, "msg" => "Method Not Allowed. Use GET"]);
+    exit;
+}
+
 $authUser = getCurrentUser();
 if(!$authUser) sendError("Unauthorized", 401);
 

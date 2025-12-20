@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 17, 2025 at 05:55 AM
+-- Generation Time: Dec 20, 2025 at 03:58 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,33 @@ SET time_zone = "+00:00";
 --
 -- Database: `multi_billing`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `categories`
+--
+
+CREATE TABLE `categories` (
+  `id` int(11) NOT NULL,
+  `org_id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `status` tinyint(4) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `categories`
+--
+
+INSERT INTO `categories` (`id`, `org_id`, `name`, `status`, `created_at`) VALUES
+(1, 11, 'Beverages', 1, '2025-12-19 10:46:19'),
+(2, 11, 'snacks', 0, '2025-12-19 10:47:31'),
+(4, 11, 'toys', 0, '2025-12-19 10:56:35'),
+(5, 11, 'Grocery', 1, '2025-12-20 02:35:15'),
+(6, 11, 'Dairy', 1, '2025-12-20 02:35:16'),
+(7, 11, 'Bakery', 1, '2025-12-20 02:35:16'),
+(8, 11, 'Personal Care', 1, '2025-12-20 02:35:16');
 
 -- --------------------------------------------------------
 
@@ -47,7 +74,9 @@ INSERT INTO `customers` (`id`, `org_id`, `outlet_id`, `name`, `phone`, `created_
 (3, 6, 5, 'ragul', '99999999999', '2025-09-03 12:40:46', '2025-09-03 12:40:46'),
 (4, 9, 6, 'ragul', '99999999999', '2025-12-10 12:28:03', '2025-12-10 12:28:03'),
 (5, 11, 17, 'ragul', '99999999999', '2025-12-16 12:00:30', '2025-12-16 12:00:30'),
-(6, 11, 17, 'jeyabala', '9874563210', '2025-12-16 17:09:42', '2025-12-16 17:09:42');
+(6, 11, 17, 'jeyabala', '9874563210', '2025-12-16 17:09:42', '2025-12-16 17:09:42'),
+(7, 15, 19, 'jeyabala', '9874563210', '2025-12-18 13:17:35', '2025-12-18 13:17:35'),
+(8, 15, 19, 'jeyabala', '9874563211', '2025-12-18 15:07:38', '2025-12-18 15:07:38');
 
 -- --------------------------------------------------------
 
@@ -105,7 +134,38 @@ INSERT INTO `inventory` (`id`, `org_id`, `outlet_id`, `product_id`, `variant_id`
 (13, 11, 17, 25, 13, 1.00, '2025-12-16 13:17:22'),
 (14, 11, 17, 25, 14, -9.00, '2025-12-16 13:17:22'),
 (15, 11, 17, 26, NULL, 99.00, '2025-12-16 17:25:57'),
-(16, 11, 17, 27, NULL, 0.00, '2025-12-16 11:56:22');
+(16, 11, 17, 27, NULL, 0.00, '2025-12-16 11:56:22'),
+(17, 11, 17, 28, NULL, 0.00, '2025-12-18 15:42:06'),
+(18, 11, 17, 29, 19, 37.00, '2025-12-19 08:49:42'),
+(19, 11, 17, 29, NULL, 12.00, '2025-12-19 08:49:42'),
+(20, 11, 17, 30, NULL, 50.00, '2025-12-19 08:17:34'),
+(21, 11, 17, 31, NULL, 20.00, '2025-12-19 08:17:34'),
+(22, 11, 17, 32, NULL, 100.00, '2025-12-19 08:17:34'),
+(23, 11, 17, 33, 20, 20.00, '2025-12-19 08:17:34'),
+(24, 11, 17, 33, 21, 20.00, '2025-12-19 08:17:34'),
+(25, 11, 17, 34, NULL, 60.00, '2025-12-19 08:17:34'),
+(26, 11, 17, 35, NULL, 50.00, '2025-12-19 16:56:49'),
+(27, 11, 17, 35, 22, 20.00, '2025-12-19 16:56:49'),
+(28, 11, 17, 35, 23, 30.00, '2025-12-19 16:56:49'),
+(29, 11, 17, 35, 24, 25.00, '2025-12-19 17:01:01'),
+(30, 11, 17, 36, NULL, 50.00, '2025-12-19 17:12:18'),
+(31, 11, 17, 36, 25, 20.00, '2025-12-19 17:12:18'),
+(32, 11, 17, 36, 26, 30.00, '2025-12-19 17:12:18'),
+(33, 11, 17, 37, NULL, 80.00, '2025-12-20 08:05:16'),
+(34, 11, 17, 38, NULL, 60.00, '2025-12-20 08:05:16'),
+(35, 11, 17, 39, NULL, 120.00, '2025-12-20 08:05:16'),
+(36, 11, 17, 40, 27, 25.00, '2025-12-20 08:05:16'),
+(37, 11, 17, 41, NULL, 150.00, '2025-12-20 08:05:16'),
+(38, 11, 17, 42, NULL, 90.00, '2025-12-20 08:05:16'),
+(39, 11, 17, 43, NULL, 70.00, '2025-12-20 08:05:16'),
+(40, 11, 17, 44, NULL, 50.00, '2025-12-20 08:05:16'),
+(41, 11, 17, 45, NULL, 40.00, '2025-12-20 08:05:16'),
+(42, 11, 17, 46, 28, 40.00, '2025-12-20 08:05:16'),
+(43, 11, 17, 47, 29, 25.00, '2025-12-20 08:05:16'),
+(44, 11, 17, 48, NULL, 100.00, '2025-12-20 08:05:16'),
+(45, 11, 17, 49, NULL, 60.00, '2025-12-20 08:05:16'),
+(46, 11, 17, 50, 30, 30.00, '2025-12-20 08:05:16'),
+(47, 11, 17, 51, NULL, 45.00, '2025-12-20 08:05:16');
 
 -- --------------------------------------------------------
 
@@ -179,7 +239,13 @@ INSERT INTO `inventory_logs` (`id`, `org_id`, `outlet_id`, `product_id`, `varian
 (55, 11, 17, 23, NULL, 'sale', -2.00, NULL, 47, '2025-12-16 17:07:44'),
 (56, 11, 17, 23, NULL, 'sale', -2.00, NULL, 48, '2025-12-16 17:07:49'),
 (57, 11, 17, 23, NULL, 'sale', -1.00, NULL, 49, '2025-12-16 17:10:25'),
-(58, 11, 17, 26, NULL, 'sale', -1.00, NULL, 50, '2025-12-16 17:25:57');
+(58, 11, 17, 26, NULL, 'sale', -1.00, NULL, 50, '2025-12-16 17:25:57'),
+(59, 11, 17, 29, NULL, '', 25.00, 'variant stock update', NULL, '2025-12-18 16:43:59'),
+(60, 11, 17, 29, NULL, 'sale', -5.00, NULL, 54, '2025-12-18 16:58:12'),
+(61, 11, 17, 29, NULL, 'sale', -5.00, NULL, 55, '2025-12-18 17:06:51'),
+(62, 11, 17, 29, NULL, 'sale', -1.00, NULL, 56, '2025-12-19 08:02:04'),
+(63, 11, 17, 29, NULL, 'sale', -1.00, NULL, 57, '2025-12-19 08:46:01'),
+(64, 11, 17, 29, NULL, 'sale', -1.00, NULL, 58, '2025-12-19 08:49:42');
 
 -- --------------------------------------------------------
 
@@ -221,7 +287,14 @@ INSERT INTO `loyalty_points` (`id`, `org_id`, `outlet_id`, `customer_id`, `sale_
 (21, 11, 17, 5, 47, 5.84, 0.00, '2025-12-16 17:07:44'),
 (22, 11, 17, 5, 48, 5.84, 0.00, '2025-12-16 17:07:49'),
 (23, 11, 17, 6, 49, 2.89, 0.00, '2025-12-16 17:10:25'),
-(24, 11, 17, 6, 50, 0.18, 0.00, '2025-12-16 17:25:57');
+(24, 11, 17, 6, 50, 0.18, 0.00, '2025-12-16 17:25:57'),
+(25, 11, 17, 6, 54, 5.25, 0.00, '2025-12-18 16:58:12'),
+(26, 11, 17, 6, 55, 5.25, 0.00, '2025-12-18 17:06:51'),
+(27, 11, 17, 6, 56, 1.05, 0.00, '2025-12-19 08:02:04'),
+(28, 11, 17, 6, 57, 1.05, 0.00, '2025-12-19 08:46:01'),
+(29, 11, 17, 6, 58, 1.05, 0.00, '2025-12-19 08:49:42'),
+(30, 11, 17, 6, 57, 0.00, 5.00, '2025-12-19 09:01:20'),
+(31, 11, 17, 6, 57, 0.00, 2.00, '2025-12-19 09:06:31');
 
 -- --------------------------------------------------------
 
@@ -247,7 +320,7 @@ INSERT INTO `numbering_schemes` (`id`, `org_id`, `next_invoice_no`, `created_at`
 (36, 5, 2, '2025-09-02 08:02:55', '2025-09-02 08:02:55'),
 (38, 6, 6, '2025-09-03 07:16:04', '2025-09-03 08:12:11'),
 (39, 9, 8, '2025-12-10 07:07:46', '2025-12-12 05:59:44'),
-(40, 11, 36, '2025-12-16 06:44:45', '2025-12-16 11:57:58');
+(40, 11, 51, '2025-12-16 06:44:45', '2025-12-19 03:19:42');
 
 -- --------------------------------------------------------
 
@@ -284,7 +357,11 @@ INSERT INTO `orgs` (`id`, `name`, `email`, `created_at`, `phone`, `address`, `ve
 (8, 'gani', 'gani@gmail.com', '2025-09-04 11:43:46', '9965727766', NULL, 'restarant', 0, '432b2708bb181b8c1aa247e634b64eaa', '33GANI1010A1Z5', 'CGST_SGST', 18.00),
 (9, 'try pandren', 'try@example.com', '2025-12-10 11:00:20', '9585858575', NULL, 'generic', 1, NULL, '29ABCDE1234F2Z6', 'CGST_SGST', 18.00),
 (10, 'my test org', 'orgtest@example.com', '2025-12-16 10:35:43', '9876543210', NULL, 'retail', 1, NULL, '29ABCDE1234F2Z5', 'CGST_SGST', 18.00),
-(11, 'my test org1', 'orgtes1@example.com', '2025-12-16 11:05:47', '9876543210', NULL, 'retail', 1, NULL, '29ABCDE1234F2Z5', 'CGST_SGST', 18.00);
+(11, 'my test org1', 'orgtes1@example.com', '2025-12-16 11:05:47', '9876543210', NULL, 'retail', 1, NULL, '29ABCDE1234F2Z5', 'CGST_SGST', 18.00),
+(12, 'my test org2', 'orgtes2@example.com', '2025-12-18 12:18:03', '9876543210', NULL, 'retail', 1, NULL, '29ABCDE1234F2Z6', 'CGST_SGST', 18.00),
+(13, 'my test org3', 'orgtes3@example.com', '2025-12-18 12:47:21', '9876543210', NULL, 'retail', 1, NULL, '29ABCDE1234F2Z7', 'CGST_SGST', 18.00),
+(14, 'my test org4', 'orgtes4@example.com', '2025-12-18 12:51:19', '9876543210', NULL, 'retail', 1, NULL, '29ABCDE1234F2Z8', 'CGST_SGST', 18.00),
+(15, 'my test org5', 'orgtes5@example.com', '2025-12-18 12:55:38', '9876543210', NULL, 'retail', 1, NULL, '29ABCDE1234F2Z8', 'CGST_SGST', 18.00);
 
 -- --------------------------------------------------------
 
@@ -322,7 +399,9 @@ INSERT INTO `outlets` (`id`, `org_id`, `name`, `address`, `vertical`, `config`, 
 (14, 10, '5Nagar', 'No.123, RR Nagar, kumba', 'retail', NULL, '2025-12-16 10:55:43'),
 (15, 10, '6Nagar', 'No.123, RR Nagar, kumba', 'retail', NULL, '2025-12-16 10:56:11'),
 (16, 10, '7Nagar', 'No.123, RR Nagar, kumba', 'retail', NULL, '2025-12-16 10:56:24'),
-(17, 11, 'Default Outlet', NULL, NULL, NULL, '2025-12-16 11:06:30');
+(17, 11, 'Default Outlet', NULL, NULL, NULL, '2025-12-16 11:06:30'),
+(18, 13, 'Default Outlet', NULL, NULL, NULL, '2025-12-18 12:48:13'),
+(19, 15, 'Default Outlet', NULL, NULL, NULL, '2025-12-18 12:56:47');
 
 -- --------------------------------------------------------
 
@@ -360,7 +439,10 @@ INSERT INTO `payments` (`id`, `sale_id`, `org_id`, `outlet_id`, `amount`, `payme
 (13, 44, 11, 17, 2944.00, 'cash', '\"{\\\"original_amount\\\":2944,\\\"redeem_points\\\":0,\\\"redeem_value\\\":0,\\\"user_meta\\\":{\\\"note\\\":\\\"Paid at counter\\\"},\\\"gst\\\":{\\\"cgst\\\":\\\"0.00\\\",\\\"sgst\\\":\\\"0.00\\\",\\\"igst\\\":\\\"0.00\\\"}}\"', '2025-12-16 15:44:47'),
 (14, 45, 11, 17, 2944.00, 'cash', '\"{\\\"original_amount\\\":2944,\\\"redeem_points\\\":0,\\\"redeem_value\\\":0,\\\"user_meta\\\":{\\\"note\\\":\\\"Paid at counter\\\"},\\\"gst\\\":{\\\"cgst\\\":\\\"224.55\\\",\\\"sgst\\\":\\\"224.55\\\",\\\"igst\\\":\\\"0.00\\\"}}\"', '2025-12-16 17:01:50'),
 (15, 46, 11, 17, 584.00, 'cash', '\"{\\\"original_amount\\\":584,\\\"redeem_points\\\":0,\\\"redeem_value\\\":0,\\\"user_meta\\\":{\\\"note\\\":\\\"Paid at counter\\\"},\\\"gst\\\":{\\\"cgst\\\":\\\"44.55\\\",\\\"sgst\\\":\\\"44.55\\\",\\\"igst\\\":\\\"0.00\\\"}}\"', '2025-12-16 17:04:14'),
-(16, 50, 11, 17, 18.00, 'cash', '\"{\\\"original_amount\\\":18,\\\"redeem_points\\\":0,\\\"redeem_value\\\":0,\\\"user_meta\\\":{\\\"note\\\":\\\"Paid at counter\\\"},\\\"gst\\\":{\\\"cgst\\\":\\\"1.35\\\",\\\"sgst\\\":\\\"1.35\\\",\\\"igst\\\":\\\"0.00\\\"}}\"', '2025-12-16 17:27:29');
+(16, 50, 11, 17, 18.00, 'cash', '\"{\\\"original_amount\\\":18,\\\"redeem_points\\\":0,\\\"redeem_value\\\":0,\\\"user_meta\\\":{\\\"note\\\":\\\"Paid at counter\\\"},\\\"gst\\\":{\\\"cgst\\\":\\\"1.35\\\",\\\"sgst\\\":\\\"1.35\\\",\\\"igst\\\":\\\"0.00\\\"}}\"', '2025-12-16 17:27:29'),
+(17, 55, 11, 17, 525.00, 'cash', '\"{\\\"original_amount\\\":525,\\\"redeem_points\\\":0,\\\"redeem_value\\\":0,\\\"user_meta\\\":{\\\"note\\\":\\\"Paid at counter\\\"},\\\"gst_summary\\\":{\\\"cgst\\\":12.5,\\\"sgst\\\":12.5,\\\"igst\\\":0}}\"', '2025-12-18 17:10:59'),
+(18, 58, 11, 17, 105.00, 'cash', '\"{\\\"original_amount\\\":105,\\\"redeem_points\\\":0,\\\"redeem_value\\\":0,\\\"user_meta\\\":{\\\"note\\\":\\\"Paid at counter\\\"},\\\"gst_summary\\\":{\\\"cgst\\\":2.5,\\\"sgst\\\":2.5,\\\"igst\\\":0}}\"', '2025-12-19 08:56:08'),
+(19, 57, 11, 17, 103.00, 'upi', '{\"original_amount\":105,\"redeem_points\":2,\"redeem_value\":2,\"user_meta\":{\"redeem_points\":2},\"gst_summary\":{\"cgst\":2.5,\"sgst\":2.5,\"igst\":0}}', '2025-12-19 09:01:20');
 
 -- --------------------------------------------------------
 
@@ -374,32 +456,58 @@ CREATE TABLE `products` (
   `outlet_id` int(11) NOT NULL,
   `name` varchar(150) DEFAULT NULL,
   `price` decimal(10,2) DEFAULT NULL,
-  `category` varchar(100) DEFAULT NULL,
   `meta` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`meta`)),
-  `created_at` datetime DEFAULT current_timestamp()
+  `created_at` datetime DEFAULT current_timestamp(),
+  `gst_rate` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `category_id` int(11) DEFAULT NULL,
+  `sub_category_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `products`
 --
 
-INSERT INTO `products` (`id`, `org_id`, `outlet_id`, `name`, `price`, `category`, `meta`, `created_at`) VALUES
-(1, 3, 2, 'Pepsi 500ml', NULL, NULL, NULL, '2025-09-01 12:41:51'),
-(2, 3, 2, 'Pepsi 1L', NULL, NULL, NULL, '2025-09-01 12:42:50'),
-(3, 4, 3, 'Pepsi 1.5L', NULL, NULL, NULL, '2025-09-01 17:26:01'),
-(14, 5, 4, 'Coca Cola', 40.00, '', '{\"brand\":\"Coca Cola\",\"size\":\"500ml\"}', '2025-09-02 13:02:35'),
-(16, 5, 4, 'lays', 10.00, 'snacks', '{\"colour\":\"green\",\"size\":\"10rs pack\"}', '2025-09-02 13:09:03'),
-(17, 6, 5, 'Dairy Milk Chocolate', 50.00, 'Snacks', '{\"barcode\":\"8900060001721\"}', '2025-09-03 12:38:50'),
-(18, 9, 6, 'Dairy Milk Chocolate', 50.00, 'Snacks', '{\"barcode\":\"8900090001821\"}', '2025-12-10 11:40:18'),
-(19, 9, 6, 'Chocolate', 100.00, 'Snacks', '{\"barcode\":\"8900090001968\"}', '2025-12-10 12:19:11'),
-(20, 9, 6, 'Milk 1L', 45.00, 'Groceries', '{\"brand\":\"Aavin\",\"size\":\"1L\",\"barcode\":\"8900090002057\"}', '2025-12-10 13:38:44'),
-(21, 9, 6, 'Pepsi 1.25L', 69.00, 'Soft Drinks', '{\"brand\":\"Pepsi\",\"size\":\"1.25L\",\"barcode\":\"8.90123E+12\"}', '2025-12-10 13:38:44'),
-(22, 9, 6, 'Dhal', 110.00, 'Groceries', '{\"brand\":\"Aashirvaad\",\"size\":\"1kg\",\"barcode\":\"8900090002279\"}', '2025-12-10 13:38:44'),
-(23, 11, 17, 'Dhal', 110.00, 'Groceries', '{\"brand\":\"Aashirvaad\",\"size\":\"1kg\",\"barcode\":\"8900110002364\"}', '2025-12-16 11:51:03'),
-(24, 11, 17, 'Milk 1L', 45.00, 'Dairy', '[]', '2025-12-16 11:51:03'),
-(25, 11, 17, 'Pepsi', 50.00, 'Soft Drinks', '{\"brand\":\"Pepsi\",\"size\":\"500ml\",\"barcode\":\"8900110002524\"}', '2025-12-16 11:51:03'),
-(26, 11, 17, 'Chocolate Bar', 20.00, 'Snacks', '{\"brand\":\"Cadbury\",\"size\":\"25g\",\"barcode\":\"8900110002623\"}', '2025-12-16 11:51:03'),
-(27, 11, 17, 'anil vermnichilli', 30.00, 'foods', '{\"barcode\":\"8900110002708\"}', '2025-12-16 11:56:22');
+INSERT INTO `products` (`id`, `org_id`, `outlet_id`, `name`, `price`, `meta`, `created_at`, `gst_rate`, `category_id`, `sub_category_id`) VALUES
+(1, 3, 2, 'Pepsi 500ml', NULL, NULL, '2025-09-01 12:41:51', 0.00, NULL, NULL),
+(2, 3, 2, 'Pepsi 1L', NULL, NULL, '2025-09-01 12:42:50', 0.00, NULL, NULL),
+(3, 4, 3, 'Pepsi 1.5L', NULL, NULL, '2025-09-01 17:26:01', 0.00, NULL, NULL),
+(14, 5, 4, 'Coca Cola', 40.00, '{\"brand\":\"Coca Cola\",\"size\":\"500ml\"}', '2025-09-02 13:02:35', 0.00, NULL, NULL),
+(16, 5, 4, 'lays', 10.00, '{\"colour\":\"green\",\"size\":\"10rs pack\"}', '2025-09-02 13:09:03', 0.00, NULL, NULL),
+(17, 6, 5, 'Dairy Milk Chocolate', 50.00, '{\"barcode\":\"8900060001721\"}', '2025-09-03 12:38:50', 0.00, NULL, NULL),
+(18, 9, 6, 'Dairy Milk Chocolate', 50.00, '{\"barcode\":\"8900090001821\"}', '2025-12-10 11:40:18', 0.00, NULL, NULL),
+(19, 9, 6, 'Chocolate', 100.00, '{\"barcode\":\"8900090001968\"}', '2025-12-10 12:19:11', 0.00, NULL, NULL),
+(20, 9, 6, 'Milk 1L', 45.00, '{\"brand\":\"Aavin\",\"size\":\"1L\",\"barcode\":\"8900090002057\"}', '2025-12-10 13:38:44', 0.00, NULL, NULL),
+(21, 9, 6, 'Pepsi 1.25L', 69.00, '{\"brand\":\"Pepsi\",\"size\":\"1.25L\",\"barcode\":\"8.90123E+12\"}', '2025-12-10 13:38:44', 0.00, NULL, NULL),
+(22, 9, 6, 'Dhal', 110.00, '{\"brand\":\"Aashirvaad\",\"size\":\"1kg\",\"barcode\":\"8900090002279\"}', '2025-12-10 13:38:44', 0.00, NULL, NULL),
+(23, 11, 17, 'Dhal', 110.00, '{\"brand\":\"Aashirvaad\",\"size\":\"1kg\",\"barcode\":\"8900110002364\"}', '2025-12-16 11:51:03', 0.00, NULL, NULL),
+(24, 11, 17, 'Milk 1L', 45.00, '[]', '2025-12-16 11:51:03', 0.00, NULL, NULL),
+(25, 11, 17, 'Pepsi', 50.00, '{\"brand\":\"Pepsi\",\"size\":\"500ml\",\"barcode\":\"8900110002524\"}', '2025-12-16 11:51:03', 0.00, NULL, NULL),
+(26, 11, 17, 'Chocolate Bar', 20.00, '{\"brand\":\"Cadbury\",\"size\":\"25g\",\"barcode\":\"8900110002623\"}', '2025-12-16 11:51:03', 0.00, NULL, NULL),
+(27, 11, 17, 'anil vermnichilli', 30.00, '{\"barcode\":\"8900110002708\"}', '2025-12-16 11:56:22', 0.00, NULL, NULL),
+(28, 11, 17, 'COCA COLA', 40.00, '{\"barcode\":\"8900110002838\"}', '2025-12-18 15:42:06', 0.00, NULL, NULL),
+(29, 11, 17, 'Milk', 100.00, '{\"barcode\":\"8900110002906\"}', '2025-12-18 15:56:15', 5.00, NULL, NULL),
+(30, 11, 17, 'Tea Powder', 120.00, '{\"brand\":\"Tata\",\"size\":\"250g\",\"barcode\":\"8900110003026\"}', '2025-12-19 08:17:34', 5.00, NULL, NULL),
+(31, 11, 17, 'Rice Bag', 1500.00, '{\"brand\":\"IndiaGate\",\"size\":\"25kg\",\"barcode\":\"8900110003149\"}', '2025-12-19 08:17:34', 0.00, NULL, NULL),
+(32, 11, 17, 'Milk Packet', 30.00, '{\"brand\":\"Aavin\",\"size\":\"500ml\",\"barcode\":\"8900110003279\"}', '2025-12-19 08:17:34', 5.00, NULL, NULL),
+(33, 11, 17, 'Shampoo', 180.00, '{\"brand\":\"Dove\",\"size\":\"180ml\",\"barcode\":\"8900110003361\"}', '2025-12-19 08:17:34', 18.00, NULL, NULL),
+(34, 11, 17, 'Biscuits', 20.00, '{\"brand\":\"Britannia\",\"size\":\"50g\",\"barcode\":\"8900110003422\"}', '2025-12-19 08:17:34', 12.00, NULL, NULL),
+(35, 11, 17, 'Tea Powder', 100.00, '[]', '2025-12-19 16:56:49', 5.00, 1, 2),
+(36, 11, 17, 'chhilli Powder', 100.00, '{\"barcode\":\"8900110003644\"}', '2025-12-19 17:12:18', 5.00, 1, 2),
+(37, 11, 17, 'Tea Powder', 100.00, '{\"brand\":\"Tata\",\"size\":\"250g\",\"barcode\":\"8900110003712\"}', '2025-12-20 08:05:15', 5.00, 5, 4),
+(38, 11, 17, 'Coffee Powder', 180.00, '{\"brand\":\"Bru\",\"size\":\"200g\",\"barcode\":\"8900110003828\"}', '2025-12-20 08:05:16', 5.00, 5, 5),
+(39, 11, 17, 'Sugar', 45.00, '{\"brand\":\"Local\",\"size\":\"1kg\",\"barcode\":\"8900110003989\"}', '2025-12-20 08:05:16', 0.00, 5, 6),
+(40, 11, 17, 'Rice Bag', 1250.00, '{\"brand\":\"India Gate\",\"size\":\"5kg\",\"barcode\":\"8900110004078\"}', '2025-12-20 08:05:16', 0.00, 5, 6),
+(41, 11, 17, 'Milk Packet', 30.00, '{\"brand\":\"Aavin\",\"size\":\"500ml\",\"barcode\":\"8900110004177\"}', '2025-12-20 08:05:16', 0.00, 6, 7),
+(42, 11, 17, 'Curd Cup', 25.00, '{\"brand\":\"Heritage\",\"size\":\"200ml\",\"barcode\":\"8900110004238\"}', '2025-12-20 08:05:16', 0.00, 6, 8),
+(43, 11, 17, 'Butter Pack', 55.00, '{\"brand\":\"Amul\",\"size\":\"100g\",\"barcode\":\"8900110004320\"}', '2025-12-20 08:05:16', 12.00, 6, 9),
+(44, 11, 17, 'Bread Loaf', 40.00, '{\"brand\":\"Britannia\",\"size\":\"400g\",\"barcode\":\"8900110004481\"}', '2025-12-20 08:05:16', 0.00, 7, 10),
+(45, 11, 17, 'Cake Slice', 60.00, '{\"brand\":\"Local\",\"size\":\"1pc\",\"barcode\":\"8900110004535\"}', '2025-12-20 08:05:16', 0.00, 7, 11),
+(46, 11, 17, 'Shampoo', 120.00, '{\"brand\":\"Dove\",\"size\":\"100ml\",\"barcode\":\"8900110004689\"}', '2025-12-20 08:05:16', 18.00, 8, 12),
+(47, 11, 17, 'Shampoo', 220.00, '{\"brand\":\"Dove\",\"size\":\"200ml\",\"barcode\":\"8900110004726\"}', '2025-12-20 08:05:16', 18.00, 8, 12),
+(48, 11, 17, 'Soap Bar', 35.00, '{\"brand\":\"Pears\",\"size\":\"75g\",\"barcode\":\"8900110004894\"}', '2025-12-20 08:05:16', 18.00, 8, 13),
+(49, 11, 17, 'Toothpaste', 95.00, '{\"brand\":\"Colgate\",\"size\":\"150g\",\"barcode\":\"8900110004955\"}', '2025-12-20 08:05:16', 18.00, 8, 14),
+(50, 11, 17, 'Face Wash', 160.00, '{\"brand\":\"Garnier\",\"size\":\"100ml\",\"barcode\":\"8900110005082\"}', '2025-12-20 08:05:16', 18.00, 8, 15),
+(51, 11, 17, 'Body Lotion', 210.00, '{\"brand\":\"Nivea\",\"size\":\"200ml\",\"barcode\":\"8900110005143\"}', '2025-12-20 08:05:16', 18.00, 8, 15);
 
 -- --------------------------------------------------------
 
@@ -412,28 +520,43 @@ CREATE TABLE `product_variants` (
   `product_id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `price` decimal(10,2) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `gst_rate` decimal(5,2) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `product_variants`
 --
 
-INSERT INTO `product_variants` (`id`, `product_id`, `name`, `price`, `created_at`) VALUES
-(1, 17, 'Small Pack', 20.00, '2025-09-03 07:08:50'),
-(2, 17, 'Family Pack', 100.00, '2025-09-03 07:08:50'),
-(3, 18, 'Small Pack', 20.00, '2025-12-10 06:10:18'),
-(4, 18, 'Family Pack', 100.00, '2025-12-10 06:10:18'),
-(5, 19, 'Small Pack', 20.00, '2025-12-10 06:49:11'),
-(6, 19, 'Family Pack', 100.00, '2025-12-10 06:49:11'),
-(7, 22, '1KG Pack', 130.00, '2025-12-12 05:00:50'),
-(8, 22, '5KG Pack', 250.00, '2025-12-12 05:18:22'),
-(11, 23, '1KG Pack', 130.00, '2025-12-16 06:21:03'),
-(12, 23, '5KG Pack', 250.00, '2025-12-16 06:21:03'),
-(13, 25, 'Small Pack', 20.00, '2025-12-16 06:21:03'),
-(14, 25, 'Family Pack', 100.00, '2025-12-16 06:21:03'),
-(15, 27, 'Small Pack', 15.00, '2025-12-16 06:26:22'),
-(16, 27, 'Family Pack', 115.00, '2025-12-16 06:26:22');
+INSERT INTO `product_variants` (`id`, `product_id`, `name`, `price`, `created_at`, `gst_rate`) VALUES
+(1, 17, 'Small Pack', 20.00, '2025-09-03 07:08:50', NULL),
+(2, 17, 'Family Pack', 100.00, '2025-09-03 07:08:50', NULL),
+(3, 18, 'Small Pack', 20.00, '2025-12-10 06:10:18', NULL),
+(4, 18, 'Family Pack', 100.00, '2025-12-10 06:10:18', NULL),
+(5, 19, 'Small Pack', 20.00, '2025-12-10 06:49:11', NULL),
+(6, 19, 'Family Pack', 100.00, '2025-12-10 06:49:11', NULL),
+(7, 22, '1KG Pack', 130.00, '2025-12-12 05:00:50', NULL),
+(8, 22, '5KG Pack', 250.00, '2025-12-12 05:18:22', NULL),
+(11, 23, '1KG Pack', 130.00, '2025-12-16 06:21:03', NULL),
+(12, 23, '5KG Pack', 250.00, '2025-12-16 06:21:03', NULL),
+(13, 25, 'Small Pack', 20.00, '2025-12-16 06:21:03', NULL),
+(14, 25, 'Family Pack', 100.00, '2025-12-16 06:21:03', NULL),
+(15, 27, 'Small Pack', 15.00, '2025-12-16 06:26:22', NULL),
+(16, 27, 'Family Pack', 115.00, '2025-12-16 06:26:22', NULL),
+(17, 28, '500 ML', 40.00, '2025-12-18 10:12:06', NULL),
+(18, 28, '1 L', 75.00, '2025-12-18 10:12:06', NULL),
+(19, 29, '500ml', 50.00, '2025-12-18 10:26:15', 5.00),
+(20, 33, 'Small Bottle', 90.00, '2025-12-19 02:47:34', 18.00),
+(21, 33, 'Large Bottle', 180.00, '2025-12-19 02:47:34', 18.00),
+(22, 35, '500g', 100.00, '2025-12-19 11:26:49', 0.00),
+(23, 35, '1kg', 180.00, '2025-12-19 11:26:49', 0.00),
+(24, 35, '250mg Pack', 45.00, '2025-12-19 11:31:01', 5.00),
+(25, 36, '500g', 100.00, '2025-12-19 11:42:18', 0.00),
+(26, 36, '1kg', 180.00, '2025-12-19 11:42:18', 0.00),
+(27, 40, 'Small Pack', 550.00, '2025-12-20 02:35:16', 0.00),
+(28, 46, 'Small Pack', 120.00, '2025-12-20 02:35:16', 18.00),
+(29, 47, 'Large Pack', 220.00, '2025-12-20 02:35:16', 18.00),
+(30, 50, 'Tube', 160.00, '2025-12-20 02:35:16', 18.00);
 
 -- --------------------------------------------------------
 
@@ -452,38 +575,46 @@ CREATE TABLE `sales` (
   `cgst` decimal(5,2) DEFAULT 0.00,
   `sgst` decimal(5,2) DEFAULT 0.00,
   `igst` decimal(5,2) DEFAULT 0.00,
+  `round_off` decimal(10,2) NOT NULL DEFAULT 0.00,
   `meta` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`meta`)),
   `created_at` datetime DEFAULT current_timestamp(),
-  `note` text DEFAULT NULL
+  `note` text DEFAULT NULL,
+  `taxable_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `gst_total` decimal(10,2) NOT NULL DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `sales`
 --
 
-INSERT INTO `sales` (`id`, `org_id`, `outlet_id`, `customer_id`, `status`, `total_amount`, `discount`, `cgst`, `sgst`, `igst`, `meta`, `created_at`, `note`) VALUES
-(9, 3, 2, NULL, 0, 140.00, 10.00, 0.00, 0.00, 0.00, NULL, '2025-09-01 13:24:19', NULL),
-(16, 4, 3, NULL, 0, 285.00, 10.00, 0.00, 0.00, 0.00, NULL, '2025-09-01 17:36:50', NULL),
-(17, 4, 3, NULL, 0, 285.00, 10.00, 0.00, 0.00, 0.00, NULL, '2025-09-01 17:38:04', NULL),
-(28, 5, 4, NULL, 0, 110.00, 10.00, 0.00, 0.00, 0.00, NULL, '2025-09-02 13:32:55', NULL),
-(29, 6, 5, NULL, 0, 140.00, 10.00, 9.00, 9.00, 0.00, NULL, '2025-09-03 12:46:04', NULL),
-(30, 6, 5, 3, 0, 140.00, 10.00, 9.00, 9.00, 0.00, NULL, '2025-09-03 12:52:39', NULL),
-(34, 9, 6, 4, 0, 1250.50, 50.00, 9.00, 9.00, 0.00, NULL, '2025-12-11 15:31:55', 'customer requested packaging'),
-(36, 9, 6, NULL, 0, 260.00, 0.00, 9.00, 9.00, 0.00, NULL, '2025-12-12 11:29:44', NULL),
-(37, 11, 17, NULL, 0, 600.00, 5.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 12:14:45', NULL),
-(38, 11, 17, NULL, 1, 645.00, 5.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 12:23:34', NULL),
-(39, 11, 17, NULL, 1, 360.00, 5.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 12:57:14', NULL),
-(40, 11, 17, NULL, 1, 360.00, 5.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 13:12:47', NULL),
-(41, 11, 17, NULL, 1, 360.00, 5.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 13:17:22', NULL),
-(42, 11, 17, NULL, 1, 289.00, 5.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 13:18:21', NULL),
-(43, 11, 17, NULL, 1, 289.00, 5.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 13:21:42', NULL),
-(44, 11, 17, NULL, 1, 2944.00, 5.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 15:43:43', NULL),
-(45, 11, 17, NULL, 1, 2944.00, 5.00, 224.55, 224.55, 0.00, NULL, '2025-12-16 17:01:35', NULL),
-(46, 11, 17, NULL, 1, 584.00, 5.00, 44.55, 44.55, 0.00, NULL, '2025-12-16 17:04:04', NULL),
-(47, 11, 17, NULL, 0, 584.00, 5.00, 44.55, 44.55, 0.00, NULL, '2025-12-16 17:07:44', NULL),
-(48, 11, 17, NULL, 0, 584.00, 5.00, 44.55, 44.55, 0.00, NULL, '2025-12-16 17:07:49', NULL),
-(49, 11, 17, NULL, 0, 289.00, 5.00, 22.05, 22.05, 0.00, NULL, '2025-12-16 17:10:25', NULL),
-(50, 11, 17, 6, 1, 18.00, 5.00, 1.35, 1.35, 0.00, NULL, '2025-12-16 17:25:57', NULL);
+INSERT INTO `sales` (`id`, `org_id`, `outlet_id`, `customer_id`, `status`, `total_amount`, `discount`, `cgst`, `sgst`, `igst`, `round_off`, `meta`, `created_at`, `note`, `taxable_amount`, `gst_total`) VALUES
+(9, 3, 2, NULL, 0, 140.00, 10.00, 0.00, 0.00, 0.00, 0.00, NULL, '2025-09-01 13:24:19', NULL, 0.00, 0.00),
+(16, 4, 3, NULL, 0, 285.00, 10.00, 0.00, 0.00, 0.00, 0.00, NULL, '2025-09-01 17:36:50', NULL, 0.00, 0.00),
+(17, 4, 3, NULL, 0, 285.00, 10.00, 0.00, 0.00, 0.00, 0.00, NULL, '2025-09-01 17:38:04', NULL, 0.00, 0.00),
+(28, 5, 4, NULL, 0, 110.00, 10.00, 0.00, 0.00, 0.00, 0.00, NULL, '2025-09-02 13:32:55', NULL, 0.00, 0.00),
+(29, 6, 5, NULL, 0, 140.00, 10.00, 9.00, 9.00, 0.00, 0.00, NULL, '2025-09-03 12:46:04', NULL, 0.00, 0.00),
+(30, 6, 5, 3, 0, 140.00, 10.00, 9.00, 9.00, 0.00, 0.00, NULL, '2025-09-03 12:52:39', NULL, 0.00, 0.00),
+(34, 9, 6, 4, 0, 1250.50, 50.00, 9.00, 9.00, 0.00, 0.00, NULL, '2025-12-11 15:31:55', 'customer requested packaging', 0.00, 0.00),
+(36, 9, 6, NULL, 0, 260.00, 0.00, 9.00, 9.00, 0.00, 0.00, NULL, '2025-12-12 11:29:44', NULL, 0.00, 0.00),
+(37, 11, 17, NULL, 0, 600.00, 5.00, 0.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 12:14:45', NULL, 0.00, 0.00),
+(38, 11, 17, NULL, 1, 645.00, 5.00, 0.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 12:23:34', NULL, 0.00, 0.00),
+(39, 11, 17, NULL, 1, 360.00, 5.00, 0.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 12:57:14', NULL, 0.00, 0.00),
+(40, 11, 17, NULL, 1, 360.00, 5.00, 0.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 13:12:47', NULL, 0.00, 0.00),
+(41, 11, 17, NULL, 1, 360.00, 5.00, 0.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 13:17:22', NULL, 0.00, 0.00),
+(42, 11, 17, NULL, 1, 289.00, 5.00, 0.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 13:18:21', NULL, 0.00, 0.00),
+(43, 11, 17, NULL, 1, 289.00, 5.00, 0.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 13:21:42', NULL, 0.00, 0.00),
+(44, 11, 17, NULL, 1, 2944.00, 5.00, 0.00, 0.00, 0.00, 0.00, NULL, '2025-12-16 15:43:43', NULL, 0.00, 0.00),
+(45, 11, 17, NULL, 1, 2944.00, 5.00, 224.55, 224.55, 0.00, 0.00, NULL, '2025-12-16 17:01:35', NULL, 0.00, 0.00),
+(46, 11, 17, NULL, 1, 584.00, 5.00, 44.55, 44.55, 0.00, 0.00, NULL, '2025-12-16 17:04:04', NULL, 0.00, 0.00),
+(47, 11, 17, NULL, 0, 584.00, 5.00, 44.55, 44.55, 0.00, 0.00, NULL, '2025-12-16 17:07:44', NULL, 0.00, 0.00),
+(48, 11, 17, NULL, 0, 584.00, 5.00, 44.55, 44.55, 0.00, 0.00, NULL, '2025-12-16 17:07:49', NULL, 0.00, 0.00),
+(49, 11, 17, NULL, 0, 289.00, 5.00, 22.05, 22.05, 0.00, 0.00, NULL, '2025-12-16 17:10:25', NULL, 0.00, 0.00),
+(50, 11, 17, 6, 1, 18.00, 5.00, 1.35, 1.35, 0.00, 0.00, NULL, '2025-12-16 17:25:57', NULL, 0.00, 0.00),
+(54, 11, 17, 6, 0, 525.00, 5.00, 12.50, 12.50, 0.00, 0.00, NULL, '2025-12-18 16:58:12', NULL, 500.00, 0.00),
+(55, 11, 17, 6, 1, 525.00, 5.00, 12.50, 12.50, 0.00, 0.00, NULL, '2025-12-18 17:06:51', NULL, 500.00, 0.00),
+(56, 11, 17, 6, 0, 105.00, 5.00, 2.50, 2.50, 0.00, 0.00, NULL, '2025-12-19 08:02:04', NULL, 100.00, 0.00),
+(57, 11, 17, 6, 1, 105.00, 5.00, 2.50, 2.50, 0.00, 0.00, NULL, '2025-12-19 08:46:01', NULL, 100.00, 0.00),
+(58, 11, 17, 6, 1, 105.00, 5.00, 2.50, 2.50, 0.00, 0.00, NULL, '2025-12-19 08:49:42', NULL, 100.00, 0.00);
 
 -- --------------------------------------------------------
 
@@ -499,43 +630,53 @@ CREATE TABLE `sale_items` (
   `quantity` int(11) NOT NULL,
   `rate` decimal(10,2) NOT NULL DEFAULT 0.00,
   `amount` decimal(10,2) NOT NULL,
-  `meta` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`meta`))
+  `meta` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`meta`)),
+  `gst_rate` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `taxable_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `cgst` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `sgst` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `igst` decimal(10,2) NOT NULL DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `sale_items`
 --
 
-INSERT INTO `sale_items` (`id`, `sale_id`, `product_id`, `variant_id`, `quantity`, `rate`, `amount`, `meta`) VALUES
-(1, 9, 1, NULL, 2, 35.00, 70.00, NULL),
-(2, 9, 2, NULL, 1, 70.00, 70.00, NULL),
-(3, 16, 3, NULL, 3, 95.00, 285.00, NULL),
-(4, 17, 3, NULL, 3, 95.00, 285.00, NULL),
-(5, 28, 14, NULL, 2, 80.00, 160.00, NULL),
-(6, 28, 16, NULL, 3, 30.00, 90.00, NULL),
-(7, 29, 17, NULL, 2, 50.00, 100.00, NULL),
-(8, 30, 17, NULL, 2, 50.00, 100.00, NULL),
-(12, 34, 19, NULL, 1, 100.00, 100.00, NULL),
-(19, 36, 22, 7, 2, 130.00, 260.00, NULL),
-(20, 37, 23, 12, 2, 250.00, 500.00, NULL),
-(21, 37, 25, 14, 1, 100.00, 100.00, NULL),
-(22, 38, 23, 12, 1, 250.00, 250.00, NULL),
-(23, 38, 25, 14, 4, 100.00, 400.00, NULL),
-(24, 39, 23, 12, 1, 250.00, 250.00, NULL),
-(25, 39, 25, 13, 3, 20.00, 60.00, NULL),
-(26, 40, 23, 12, 1, 250.00, 250.00, NULL),
-(27, 40, 25, 13, 3, 20.00, 60.00, NULL),
-(28, 41, 23, 12, 1, 250.00, 250.00, NULL),
-(29, 41, 25, 13, 3, 20.00, 60.00, NULL),
-(30, 42, 23, 12, 1, 250.00, 250.00, NULL),
-(31, 43, 23, 12, 1, 250.00, 250.00, NULL),
-(32, 44, 23, 12, 10, 250.00, 2500.00, NULL),
-(33, 45, 23, 12, 10, 250.00, 2500.00, NULL),
-(34, 46, 23, 12, 2, 250.00, 500.00, NULL),
-(35, 47, 23, 12, 2, 250.00, 500.00, NULL),
-(36, 48, 23, 12, 2, 250.00, 500.00, NULL),
-(37, 49, 23, 12, 1, 250.00, 250.00, NULL),
-(38, 50, 26, NULL, 1, 20.00, 20.00, NULL);
+INSERT INTO `sale_items` (`id`, `sale_id`, `product_id`, `variant_id`, `quantity`, `rate`, `amount`, `meta`, `gst_rate`, `taxable_amount`, `cgst`, `sgst`, `igst`) VALUES
+(1, 9, 1, NULL, 2, 35.00, 70.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(2, 9, 2, NULL, 1, 70.00, 70.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(3, 16, 3, NULL, 3, 95.00, 285.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(4, 17, 3, NULL, 3, 95.00, 285.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(5, 28, 14, NULL, 2, 80.00, 160.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(6, 28, 16, NULL, 3, 30.00, 90.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(7, 29, 17, NULL, 2, 50.00, 100.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(8, 30, 17, NULL, 2, 50.00, 100.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(12, 34, 19, NULL, 1, 100.00, 100.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(19, 36, 22, 7, 2, 130.00, 260.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(20, 37, 23, 12, 2, 250.00, 500.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(21, 37, 25, 14, 1, 100.00, 100.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(22, 38, 23, 12, 1, 250.00, 250.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(23, 38, 25, 14, 4, 100.00, 400.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(24, 39, 23, 12, 1, 250.00, 250.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(25, 39, 25, 13, 3, 20.00, 60.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(26, 40, 23, 12, 1, 250.00, 250.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(27, 40, 25, 13, 3, 20.00, 60.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(28, 41, 23, 12, 1, 250.00, 250.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(29, 41, 25, 13, 3, 20.00, 60.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(30, 42, 23, 12, 1, 250.00, 250.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(31, 43, 23, 12, 1, 250.00, 250.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(32, 44, 23, 12, 10, 250.00, 2500.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(33, 45, 23, 12, 10, 250.00, 2500.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(34, 46, 23, 12, 2, 250.00, 500.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(35, 47, 23, 12, 2, 250.00, 500.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(36, 48, 23, 12, 2, 250.00, 500.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(37, 49, 23, 12, 1, 250.00, 250.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(38, 50, 26, NULL, 1, 20.00, 20.00, NULL, 0.00, 0.00, 0.00, 0.00, 0.00),
+(39, 54, 29, NULL, 5, 100.00, 500.00, NULL, 5.00, 500.00, 12.50, 12.50, 0.00),
+(40, 55, 29, NULL, 5, 100.00, 525.00, NULL, 5.00, 500.00, 12.50, 12.50, 0.00),
+(41, 56, 29, NULL, 1, 100.00, 105.00, NULL, 5.00, 100.00, 2.50, 2.50, 0.00),
+(42, 57, 29, NULL, 1, 100.00, 105.00, NULL, 5.00, 100.00, 2.50, 2.50, 0.00),
+(43, 58, 29, NULL, 1, 100.00, 105.00, NULL, 5.00, 100.00, 2.50, 2.50, 0.00);
 
 --
 -- Triggers `sale_items`
@@ -661,7 +802,42 @@ INSERT INTO `subscriptions` (`id`, `org_id`, `plan`, `allowed_verticals`, `max_o
 (5, 6, 'free', '[\"retail\"]', 1, '[\"loyalty_points\",\"barcode\"]', '2025-09-03 09:02:20', '2025-09-10 09:02:20', 'EXPIRED', '2025-09-03 12:32:20', '', NULL, NULL, NULL),
 (6, 9, 'free', '[\"generic\"]', 2, '[\"loyalty_points\",\"barcode\",\"expiry_date\"]', '2025-12-10 06:36:05', '2025-12-17 06:36:05', 'ACTIVE', '2025-12-10 11:06:05', '', NULL, NULL, NULL),
 (7, 10, 'annual', '[\"retail\"]', 0, '[\"loyalty_points\",\"barcode\"]', '2025-12-16 10:51:47', '2026-12-16 10:51:47', 'ACTIVE', '2025-12-16 10:51:47', 'retail', NULL, NULL, NULL),
-(8, 11, 'annual', '[\"retail\"]', 0, '[\"loyalty_points\",\"barcode\"]', '2025-12-16 11:08:41', '2026-12-16 11:08:41', 'ACTIVE', '2025-12-16 11:08:41', 'retail', NULL, NULL, NULL);
+(8, 11, 'annual', '[\"retail\"]', 0, '[\"loyalty_points\",\"barcode\"]', '2025-12-16 11:08:41', '2026-12-16 11:08:41', 'ACTIVE', '2025-12-16 11:08:41', 'retail', NULL, NULL, NULL),
+(9, 15, 'annual', '[\"Retail\"]', 1, '[\"loayalty_points\"]', '2025-12-18 15:07:17', '2026-12-18 15:07:17', 'ACTIVE', '2025-12-18 15:07:17', 'Retail', NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `sub_categories`
+--
+
+CREATE TABLE `sub_categories` (
+  `id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `status` tinyint(4) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `sub_categories`
+--
+
+INSERT INTO `sub_categories` (`id`, `category_id`, `name`, `status`, `created_at`) VALUES
+(1, 1, 'Green Tea', 1, '2025-12-19 11:01:29'),
+(2, 1, 'Tea', 1, '2025-12-19 11:06:05'),
+(4, 5, 'Tea', 1, '2025-12-20 02:35:15'),
+(5, 5, 'Coffee', 1, '2025-12-20 02:35:16'),
+(6, 5, 'Essentials', 1, '2025-12-20 02:35:16'),
+(7, 6, 'Milk', 1, '2025-12-20 02:35:16'),
+(8, 6, 'Curd', 1, '2025-12-20 02:35:16'),
+(9, 6, 'Butter', 1, '2025-12-20 02:35:16'),
+(10, 7, 'Bread', 1, '2025-12-20 02:35:16'),
+(11, 7, 'Cake', 1, '2025-12-20 02:35:16'),
+(12, 8, 'Hair Care', 1, '2025-12-20 02:35:16'),
+(13, 8, 'Bath Soap', 1, '2025-12-20 02:35:16'),
+(14, 8, 'Oral Care', 1, '2025-12-20 02:35:16'),
+(15, 8, 'Skin Care', 1, '2025-12-20 02:35:16');
 
 -- --------------------------------------------------------
 
@@ -700,7 +876,10 @@ INSERT INTO `users` (`id`, `org_id`, `outlet_id`, `name`, `email`, `password`, `
 (16, 10, 14, '5Nagar Admin', 'branch7@example.com', '$2y$10$eM2ZBV/XYyYQuVQa6a6JHOcsn/MVp3iQ7AhdjwuSbA3nupmqt82Ry', 'staff', '2025-12-16 10:55:43'),
 (17, 10, 15, '6Nagar Admin', 'branch8@example.com', '$2y$10$YR0OUhFJPr3waJLr44hnJ.yJxg1FaAiNDKpnAu4FrFZ1BhXr5/ycG', 'staff', '2025-12-16 10:56:11'),
 (18, 10, 16, '7Nagar Admin', 'branch9@example.com', '$2y$10$okdzeXAecwVrM.CSaBsYN.0yPIIJrjzXbWen6oSCXWqRKUbjsj0R.', 'staff', '2025-12-16 10:56:25'),
-(19, 11, 17, 'my test org1', 'orgtest1@example.com', '$2y$10$spuoQff7LNzvZT9UkyD5Weefe2Jl2mInEkoqOvpInOWCHUROKM5C.', 'admin', '2025-12-16 11:06:30');
+(19, 11, 17, 'my test org1', 'orgtest1@example.com', '$2y$10$spuoQff7LNzvZT9UkyD5Weefe2Jl2mInEkoqOvpInOWCHUROKM5C.', 'admin', '2025-12-16 11:06:30'),
+(20, 13, 18, 'my test org3', 'orgtest3@example.com', '$2y$10$82To8NmEb8uiP3ySg8NAcO298oaN4aVFXGAewF3Q2b1IthIAHwWgW', 'admin', '2025-12-18 12:48:13'),
+(21, 13, 18, 'my test org4', 'orgtest4@example.com', '$2y$10$VD0oVn/clH3KOklp07OCTelJXAondtEQl//iku6KGLuWMIeMOImOm', 'admin', '2025-12-18 12:51:56'),
+(22, 15, 19, 'my test org5', 'orgtest5@example.com', '$2y$10$pd7xoGpJuh3RCZw5q41PTu30IIq9cGJR37R324MHp3cHAQIelpaWq', 'admin', '2025-12-18 12:56:47');
 
 -- --------------------------------------------------------
 
@@ -738,6 +917,13 @@ INSERT INTO `vertical_features` (`id`, `vertical`, `feature_id`, `is_required`, 
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `categories`
+--
+ALTER TABLE `categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_org_category` (`org_id`,`name`);
 
 --
 -- Indexes for table `customers`
@@ -818,7 +1004,9 @@ ALTER TABLE `payments`
 ALTER TABLE `products`
   ADD PRIMARY KEY (`id`),
   ADD KEY `org_id` (`org_id`),
-  ADD KEY `fk_products_outlet` (`outlet_id`);
+  ADD KEY `fk_products_outlet` (`outlet_id`),
+  ADD KEY `fk_product_category` (`category_id`),
+  ADD KEY `fk_product_sub_category` (`sub_category_id`);
 
 --
 -- Indexes for table `product_variants`
@@ -852,6 +1040,13 @@ ALTER TABLE `subscriptions`
   ADD KEY `org_id` (`org_id`);
 
 --
+-- Indexes for table `sub_categories`
+--
+ALTER TABLE `sub_categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_cat_sub` (`category_id`,`name`);
+
+--
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
@@ -871,10 +1066,16 @@ ALTER TABLE `vertical_features`
 --
 
 --
+-- AUTO_INCREMENT for table `categories`
+--
+ALTER TABLE `categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `features`
@@ -886,19 +1087,19 @@ ALTER TABLE `features`
 -- AUTO_INCREMENT for table `inventory`
 --
 ALTER TABLE `inventory`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
 
 --
 -- AUTO_INCREMENT for table `inventory_logs`
 --
 ALTER TABLE `inventory_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
 
 --
 -- AUTO_INCREMENT for table `loyalty_points`
 --
 ALTER TABLE `loyalty_points`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT for table `numbering_schemes`
@@ -910,55 +1111,61 @@ ALTER TABLE `numbering_schemes`
 -- AUTO_INCREMENT for table `orgs`
 --
 ALTER TABLE `orgs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `outlets`
 --
 ALTER TABLE `outlets`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
 
 --
 -- AUTO_INCREMENT for table `product_variants`
 --
 ALTER TABLE `product_variants`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT for table `sales`
 --
 ALTER TABLE `sales`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
 
 --
 -- AUTO_INCREMENT for table `sale_items`
 --
 ALTER TABLE `sale_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `subscriptions`
 --
 ALTER TABLE `subscriptions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `sub_categories`
+--
+ALTER TABLE `sub_categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `vertical_features`
@@ -1026,6 +1233,8 @@ ALTER TABLE `payments`
 -- Constraints for table `products`
 --
 ALTER TABLE `products`
+  ADD CONSTRAINT `fk_product_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`),
+  ADD CONSTRAINT `fk_product_sub_category` FOREIGN KEY (`sub_category_id`) REFERENCES `sub_categories` (`id`),
   ADD CONSTRAINT `fk_products_outlet` FOREIGN KEY (`outlet_id`) REFERENCES `outlets` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`org_id`) REFERENCES `orgs` (`id`);
 
@@ -1053,6 +1262,12 @@ ALTER TABLE `sale_items`
 --
 ALTER TABLE `subscriptions`
   ADD CONSTRAINT `subscriptions_ibfk_1` FOREIGN KEY (`org_id`) REFERENCES `orgs` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `sub_categories`
+--
+ALTER TABLE `sub_categories`
+  ADD CONSTRAINT `fk_sub_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `users`

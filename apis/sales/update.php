@@ -9,7 +9,7 @@ require_once __DIR__.'/../../services/HookService.php';
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:3000");
-header("Access-Control-Allow-Methods: POST, PATCH, OPTIONS");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
 if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
@@ -17,20 +17,20 @@ if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    sendError("Method Not Allowed. Use POST", 405);
+}
+
 $authUser = getCurrentUser();
 if (!$authUser) sendError("Unauthorized", 401);
 
 /* -------------------------------------------------
-   PARSE INPUT
+   INPUT
 ------------------------------------------------- */
 $input = json_decode(file_get_contents("php://input"), true);
-if (json_last_error() !== JSON_ERROR_NONE) {
-    sendError("Invalid JSON");
-}
+if (!$input) sendError("Invalid JSON");
 
-if (empty($input['sale_id'])) {
-    sendError("sale_id is required");
-}
+if (empty($input['sale_id'])) sendError("sale_id is required");
 
 $sale_id = (int)$input['sale_id'];
 
@@ -38,175 +38,145 @@ $sale_id = (int)$input['sale_id'];
    FETCH SALE
 ------------------------------------------------- */
 $stmt = $pdo->prepare("
-    SELECT * FROM sales 
-    WHERE id=? AND org_id=? 
+    SELECT * FROM sales
+    WHERE id=? AND org_id=?
     LIMIT 1
 ");
 $stmt->execute([$sale_id, $authUser['org_id']]);
 $sale = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$sale) sendError("Sale not found or unauthorized", 404);
+if (!$sale) sendError("Sale not found", 404);
 
 /* -------------------------------------------------
-   ALLOWED FIELDS
-------------------------------------------------- */
-$allowed = ['discount', 'note', 'customer_id', 'outlet_id', 'items'];
-$updateData = [];
-
-foreach ($allowed as $f) {
-    if (array_key_exists($f, $input)) {
-        $updateData[$f] = $input[$f];
-    }
-}
-
-/* -------------------------------------------------
-   OUTLET VALIDATION
+   OUTLET
 ------------------------------------------------- */
 $outlet_id = $sale['outlet_id'];
 
-if (isset($updateData['outlet_id'])) {
-    $oid = (int)$updateData['outlet_id'];
+$stmt = $pdo->prepare("
+    SELECT id, name
+    FROM outlets
+    WHERE id=? AND org_id=?
+    LIMIT 1
+");
+$stmt->execute([$outlet_id, $authUser['org_id']]);
+$outlet = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $stmt = $pdo->prepare("SELECT id FROM outlets WHERE id=? AND org_id=?");
-    $stmt->execute([$oid, $authUser['org_id']]);
-    if (!$stmt->fetch()) sendError("Invalid outlet_id",403);
-
-    $outlet_id = $oid;
-}
+if (!$outlet) sendError("Invalid outlet", 403);
 
 /* -------------------------------------------------
-   ITEM VALIDATION + RATE + AMOUNT
+   ITEMS (OPTIONAL UPDATE)
 ------------------------------------------------- */
-if (isset($updateData['items'])) {
+$items = $input['items'] ?? [];
 
-    if (!is_array($updateData['items']) || count($updateData['items']) === 0) {
-        sendError("items must be non-empty array");
-    }
+if (!empty($items)) {
 
-    foreach ($updateData['items'] as &$item) {
+    foreach ($items as &$item) {
 
         if (!empty($item['barcode']) && empty($item['product_id'])) {
             $stmt = $pdo->prepare("
                 SELECT id FROM products
                 WHERE org_id=? AND outlet_id=?
-                  AND JSON_UNQUOTE(JSON_EXTRACT(meta,'$.barcode'))=?
+                AND JSON_UNQUOTE(JSON_EXTRACT(meta,'$.barcode'))=?
             ");
             $stmt->execute([
                 $authUser['org_id'],
                 $outlet_id,
                 trim($item['barcode'])
             ]);
-            $pid = $stmt->fetchColumn();
-            if (!$pid) sendError("Product not found for barcode");
-            $item['product_id'] = (int)$pid;
+            $item['product_id'] = (int)$stmt->fetchColumn();
+            if (!$item['product_id']) sendError("Invalid barcode");
         }
 
         if (empty($item['product_id']) || empty($item['quantity'])) {
-            sendError("product_id & quantity required");
+            sendError("product_id and quantity required");
         }
 
         $item['variant_id'] = $item['variant_id'] ?? null;
 
-        if ($item['variant_id']) {
-            $stmt = $pdo->prepare("
-                SELECT v.price
-                FROM product_variants v
-                JOIN products p ON p.id=v.product_id
-                WHERE v.id=? AND p.org_id=? AND p.outlet_id=?
-            ");
-            $stmt->execute([
-                $item['variant_id'],
-                $authUser['org_id'],
-                $outlet_id
-            ]);
-            $rate = $stmt->fetchColumn();
-            if ($rate === false) sendError("Invalid variant_id");
-        } else {
-            $stmt = $pdo->prepare("
-                SELECT price FROM products
-                WHERE id=? AND org_id=? AND outlet_id=?
-            ");
-            $stmt->execute([
-                $item['product_id'],
-                $authUser['org_id'],
-                $outlet_id
-            ]);
-            $rate = $stmt->fetchColumn();
-            if ($rate === false) sendError("Invalid product_id");
+        if (!isset($item['rate']) || $item['rate'] === "") {
+            if ($item['variant_id']) {
+                $stmt = $pdo->prepare("SELECT price FROM product_variants WHERE id=?");
+                $stmt->execute([$item['variant_id']]);
+            } else {
+                $stmt = $pdo->prepare("SELECT price FROM products WHERE id=?");
+                $stmt->execute([$item['product_id']]);
+            }
+            $item['rate'] = (float)$stmt->fetchColumn();
         }
 
-        $item['rate']   = (float)$rate;
-        $item['amount'] = $item['rate'] * $item['quantity'];
+        if ($item['rate'] <= 0) sendError("Invalid rate");
     }
     unset($item);
 }
 
 /* -------------------------------------------------
-   GST FROM ORG (SOURCE OF TRUTH)s
+   GST CALCULATION (SAME AS CREATE)
 ------------------------------------------------- */
-$stmt = $pdo->prepare("
-    SELECT gst_type, gst_rate 
-    FROM orgs 
-    WHERE id=? LIMIT 1
-");
-$stmt->execute([$authUser['org_id']]);
-$org = $stmt->fetch(PDO::FETCH_ASSOC);
+$gst_type = 'CGST_SGST';
 
-$gst_type = $org['gst_type'];
-$gst_rate = (float)$org['gst_rate'];
+$taxable_total = 0;
+$cgst_total = 0;
+$sgst_total = 0;
+$igst_total = 0;
+$grand_total = 0;
 
-/* -------------------------------------------------
-   RECALCULATE TOTALS (SAME AS CREATE)
-------------------------------------------------- */
-$items = $updateData['items'] ?? [];
+foreach ($items as &$item) {
 
-if (!empty($items)) {
-    $sub_total = 0;
-    foreach ($items as $i) {
-        $sub_total += $i['amount'];
+    if ($item['variant_id']) {
+        $stmt = $pdo->prepare("SELECT gst_rate FROM product_variants WHERE id=?");
+        $stmt->execute([$item['variant_id']]);
+    } else {
+        $stmt = $pdo->prepare("SELECT gst_rate FROM products WHERE id=?");
+        $stmt->execute([$item['product_id']]);
     }
-} else {
-    $stmt = $pdo->prepare("SELECT SUM(amount) FROM sale_items WHERE sale_id=?");
-    $stmt->execute([$sale_id]);
-    $sub_total = (float)$stmt->fetchColumn();
-}
+    $gst_rate = (float)$stmt->fetchColumn();
 
-$discount = isset($updateData['discount'])
-    ? (float)$updateData['discount']
-    : (float)$sale['discount'];
+    $rate = (float)$item['rate'];
+    $qty  = (float)$item['quantity'];
 
-$taxable = max(0, $sub_total - $discount);
+    $taxable = round($rate * $qty, 2);
+    $gst_amt = round(($taxable * $gst_rate) / 100, 2);
 
-$cgst = $sgst = $igst = 0;
-
-if ($gst_rate > 0) {
+    $cgst = $sgst = $igst = 0;
     if ($gst_type === 'CGST_SGST') {
-        $half = $gst_rate / 2;
-        $cgst = ($taxable * $half) / 100;
-        $sgst = ($taxable * $half) / 100;
-    } elseif ($gst_type === 'IGST') {
-        $igst = ($taxable * $gst_rate) / 100;
+        $cgst = round($gst_amt / 2, 2);
+        $sgst = round($gst_amt / 2, 2);
+    } else {
+        $igst = $gst_amt;
     }
-}
 
-$gross     = $taxable + $cgst + $sgst + $igst;
-$round_off = round($gross) - $gross;
-$final     = round($gross);
+    $line_total = round($taxable + $cgst + $sgst + $igst, 2);
+
+    $item['taxable_amount'] = $taxable;
+    $item['gst_rate'] = $gst_rate;
+    $item['cgst'] = $cgst;
+    $item['sgst'] = $sgst;
+    $item['igst'] = $igst;
+    $item['amount'] = $line_total;
+
+    $taxable_total += $taxable;
+    $cgst_total += $cgst;
+    $sgst_total += $sgst;
+    $igst_total += $igst;
+    $grand_total += $line_total;
+}
+unset($item);
+
+$round_off = round($grand_total) - $grand_total;
+$final_total = round($grand_total);
 
 /* -------------------------------------------------
-   FINAL UPDATE PAYLOAD
+   UPDATE PAYLOAD
 ------------------------------------------------- */
-$updateData = array_merge($updateData, [
-    'sub_total'   => round($sub_total,2),
-    'discount'    => round($discount,2),
-    'cgst'        => round($cgst,2),
-    'sgst'        => round($sgst,2),
-    'igst'        => round($igst,2),
-    'round_off'   => round($round_off,2),
-    'total_amount'=> $final,
-    'gst_type'    => $gst_type,
-    'gst_rate'    => $gst_rate
-]);
+$updateData = [
+    'items'          => $items,
+    'taxable_amount' => round($taxable_total,2),
+    'cgst'           => round($cgst_total,2),
+    'sgst'           => round($sgst_total,2),
+    'igst'           => round($igst_total,2),
+    'round_off'      => round($round_off,2),
+    'total_amount'   => $final_total
+];
 
 /* -------------------------------------------------
    SAVE
@@ -221,7 +191,20 @@ try {
     $billing->updateSale($authUser['org_id'], $sale_id, $sale, $updateData);
 
     $pdo->commit();
-    sendSuccess(['sale_id'=>$sale_id], "Sale updated successfully");
+
+    sendSuccess([
+        "sale_id" => $sale_id,
+        "outlet"  => $outlet,
+        "items"   => $items,
+        "summary" => [
+            "taxable_amount" => round($taxable_total,2),
+            "cgst" => round($cgst_total,2),
+            "sgst" => round($sgst_total,2),
+            "igst" => round($igst_total,2),
+            "round_off" => round($round_off,2),
+            "grand_total" => $final_total
+        ]
+    ], "Sale updated successfully");
 
 } catch (Exception $e) {
     $pdo->rollBack();

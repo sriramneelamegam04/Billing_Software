@@ -3,15 +3,22 @@ require_once __DIR__.'/../../helpers/response.php';
 require_once __DIR__.'/../../helpers/auth.php';
 require_once __DIR__.'/../../bootstrap/db.php';
 require_once __DIR__.'/../../models/Payment.php';
+require_once __DIR__.'/../../services/SubscriptionService.php';
+require_once __DIR__ . '/../../models/Subscription.php';
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:3000");
-header("Access-Control-Allow-Methods: POST, PATCH, OPTIONS");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
 if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
     http_response_code(200);
     exit;
+}
+
+// Method validation
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    sendError("Method Not Allowed. Use POST", 405);
 }
 
 /* -------------------------------------------------
@@ -21,9 +28,18 @@ $authUser = getCurrentUser();
 if (!$authUser) sendError("Unauthorized", 401);
 
 /* -------------------------------------------------
+   SUBSCRIPTION CHECK
+------------------------------------------------- */
+$subscriptionModel = new Subscription($pdo);
+$activeSub = $subscriptionModel->getActive($authUser['org_id']);
+if (!$activeSub) {
+    sendError("Active subscription required", 403);
+}
+
+/* -------------------------------------------------
    INPUT
 ------------------------------------------------- */
-$input = json_decode(file_get_contents('php://input'), true);
+$input = json_decode(file_get_contents("php://input"), true);
 if (!$input) sendError("Invalid JSON");
 
 if (empty($input['payment_id'])) {
@@ -35,12 +51,23 @@ $payment_mode = isset($input['payment_mode']) ? trim($input['payment_mode']) : n
 $meta_input   = $input['meta'] ?? [];
 
 /* -------------------------------------------------
-   FETCH PAYMENT
+   FETCH PAYMENT + SALE (SOURCE OF TRUTH)
 ------------------------------------------------- */
 $stmt = $pdo->prepare("
-    SELECT p.*, s.id AS sale_id, s.org_id, s.outlet_id,
-           s.customer_id, s.total_amount, s.status,
-           o.vertical
+    SELECT 
+        p.id AS payment_id,
+        p.payment_mode,
+        p.amount,
+        s.id AS sale_id,
+        s.org_id,
+        s.outlet_id,
+        s.customer_id,
+        s.total_amount,
+        s.status,
+        s.cgst,
+        s.sgst,
+        s.igst,
+        o.vertical
     FROM payments p
     JOIN sales s ON s.id = p.sale_id
     JOIN outlets o ON o.id = s.outlet_id
@@ -55,7 +82,7 @@ if (!$payment) {
 }
 
 /* -------------------------------------------------
-   BLOCK UPDATE IF SALE NOT PAID YET
+   SALE MUST BE PAID
 ------------------------------------------------- */
 if ((int)$payment['status'] !== 1) {
     sendError("Cannot update payment until sale is PAID", 409);
@@ -67,9 +94,9 @@ if ((int)$payment['status'] !== 1) {
 $original_amount = (float)$payment['total_amount'];
 $final_amount    = $original_amount;
 
-$vertical       = strtolower($payment['vertical'] ?? 'generic');
-$redeem_points  = 0;
-$redeem_value   = 0;
+$vertical      = strtolower($payment['vertical'] ?? 'generic');
+$redeem_points = 0;
+$redeem_value  = 0;
 
 /* -------------------------------------------------
    LOYALTY REDEEM (SAME AS CREATE)
@@ -99,7 +126,8 @@ if ($vertical !== 'restaurant' && isset($meta_input['redeem_points'])) {
             sendError("Insufficient loyalty points. Available: $balance");
         }
 
-        $redeem_value = $redeem_points; // ₹1 per point
+        // ₹1 per point
+        $redeem_value = $redeem_points;
         $final_amount = max(0, $original_amount - $redeem_value);
     }
 }
@@ -120,17 +148,17 @@ try {
     ");
 
     $stmt->execute([
-        $final_amount,
+        round($final_amount,2),
         $payment_mode,
         json_encode([
-            'original_amount' => $original_amount,
+            'original_amount' => round($original_amount,2),
             'redeem_points'   => $redeem_points,
-            'redeem_value'    => $redeem_value,
+            'redeem_value'    => round($redeem_value,2),
             'user_meta'       => $meta_input,
-            'gst' => [
-                'cgst' => $payment['cgst'] ?? 0,
-                'sgst' => $payment['sgst'] ?? 0,
-                'igst' => $payment['igst'] ?? 0
+            'gst_summary' => [
+                'cgst' => (float)$payment['cgst'],
+                'sgst' => (float)$payment['sgst'],
+                'igst' => (float)$payment['igst']
             ]
         ], JSON_UNESCAPED_UNICODE),
         $payment_id,
@@ -138,7 +166,7 @@ try {
     ]);
 
     /* -------------------------
-       UPDATE LOYALTY REDEEM (DELTA SAFE)
+       LOYALTY REDEEM ENTRY
     ------------------------- */
     if ($redeem_points > 0) {
         $stmt = $pdo->prepare("
@@ -170,5 +198,5 @@ try {
 
 } catch (Exception $e) {
     $pdo->rollBack();
-    sendError("Failed to update payment: " . $e->getMessage());
+    sendError("Failed to update payment: ".$e->getMessage());
 }

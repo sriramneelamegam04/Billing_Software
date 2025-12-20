@@ -3,104 +3,156 @@ require_once __DIR__.'/../bootstrap/db.php';
 
 class Product {
 
-    public $pdo; // <-- IMPORTANT: must be public for other services
+    public $pdo;
 
     public function __construct($pdo) {
         $this->pdo = $pdo;
     }
 
-    // --------------------------------------------
-    // CREATE PRODUCT
-    // --------------------------------------------
-    public function create($data) {
+    /* ============================================
+       CREATE PRODUCT
+       (CATEGORY + SUB CATEGORY ID BASED)
+    ============================================ */
+    public function create(array $data) {
 
-        // meta JSON safe convert
-        $meta = $data['meta'] ?? [];
-        if (!is_array($meta)) {
-            $meta = [];
+        // ✅ META ALWAYS ARRAY
+        $meta = [];
+        if (isset($data['meta']) && is_array($data['meta'])) {
+            $meta = $data['meta'];
         }
 
-        $metaJson = json_encode($meta, JSON_UNESCAPED_UNICODE);
-
         $stmt = $this->pdo->prepare("
-            INSERT INTO products 
-            (name, org_id, outlet_id, price, category, meta)
-            VALUES (:name, :org_id, :outlet_id, :price, :category, :meta)
+            INSERT INTO products (
+                name,
+                org_id,
+                outlet_id,
+                price,
+                category_id,
+                sub_category_id,
+                gst_rate,
+                meta
+            ) VALUES (
+                :name,
+                :org_id,
+                :outlet_id,
+                :price,
+                :category_id,
+                :sub_category_id,
+                :gst_rate,
+                :meta
+            )
         ");
 
         $stmt->execute([
-            ':name'      => $data['name'],
-            ':org_id'    => $data['org_id'],
-            ':outlet_id' => $data['outlet_id'],
-            ':price'     => $data['price'],
-            ':category'  => $data['category'] ?? '',
-            ':meta'      => $metaJson
+            ':name'            => $data['name'],
+            ':org_id'          => $data['org_id'],
+            ':outlet_id'       => $data['outlet_id'],
+            ':price'           => $data['price'],
+            ':category_id'     => $data['category_id'] ?? null,
+            ':sub_category_id' => $data['sub_category_id'] ?? null,
+            ':gst_rate'        => $data['gst_rate'] ?? 0,
+            ':meta'            => json_encode($meta, JSON_UNESCAPED_UNICODE)
         ]);
 
         return $this->pdo->lastInsertId();
     }
 
-    // --------------------------------------------
-    // UPDATE PRODUCT
-    // --------------------------------------------
-    public function update($id, $org_id, $outlet_id, $data) {
+    /* ============================================
+       UPDATE PRODUCT
+       (SAFE META UPDATE)
+    ============================================ */
+    public function update($id, $org_id, $outlet_id, array $data) {
 
-        $meta = $data['meta'] ?? null;
-        if (is_array($meta)) {
-            $meta = json_encode($meta, JSON_UNESCAPED_UNICODE);
+        // ✅ FETCH EXISTING META FIRST
+        $stmt = $this->pdo->prepare("
+            SELECT meta FROM products
+            WHERE id=? AND org_id=? AND outlet_id=?
+        ");
+        $stmt->execute([$id, $org_id, $outlet_id]);
+        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$existing) {
+            return false;
+        }
+
+        $meta = [];
+        if (!empty($existing['meta'])) {
+            $decoded = json_decode($existing['meta'], true);
+            if (is_array($decoded)) {
+                $meta = $decoded;
+            }
+        }
+
+        // ✅ MERGE META IF PROVIDED
+        if (isset($data['meta']) && is_array($data['meta'])) {
+            $meta = array_merge($meta, $data['meta']);
         }
 
         $stmt = $this->pdo->prepare("
             UPDATE products
-            SET name = :name,
+            SET
+                name = :name,
                 price = :price,
-                category = :category,
+                category_id = :category_id,
+                sub_category_id = :sub_category_id,
+                gst_rate = :gst_rate,
                 meta = :meta
-            WHERE id = :id AND org_id = :org_id AND outlet_id = :outlet_id
+            WHERE id = :id
+              AND org_id = :org_id
+              AND outlet_id = :outlet_id
         ");
 
         return $stmt->execute([
-            ':name'      => $data['name'],
-            ':price'     => $data['price'],
-            ':category'  => $data['category'] ?? '',
-            ':meta'      => $meta,
-            ':id'        => $id,
-            ':org_id'    => $org_id,
-            ':outlet_id' => $outlet_id
+            ':name'            => $data['name'],
+            ':price'           => $data['price'],
+            ':category_id'     => $data['category_id'] ?? null,
+            ':sub_category_id' => $data['sub_category_id'] ?? null,
+            ':gst_rate'        => $data['gst_rate'] ?? 0,
+            ':meta'            => json_encode($meta, JSON_UNESCAPED_UNICODE),
+            ':id'              => $id,
+            ':org_id'          => $org_id,
+            ':outlet_id'       => $outlet_id
         ]);
     }
 
-    // --------------------------------------------
-    // DELETE PRODUCT
-    // --------------------------------------------
+    /* ============================================
+       DELETE PRODUCT
+    ============================================ */
     public function delete($id, $org_id, $outlet_id) {
 
         $stmt = $this->pdo->prepare("
-            DELETE FROM products 
+            DELETE FROM products
             WHERE id = ? AND org_id = ? AND outlet_id = ?
         ");
 
         return $stmt->execute([$id, $org_id, $outlet_id]);
     }
 
-    // --------------------------------------------
-    // LIST PRODUCTS
-    // --------------------------------------------
+    /* ============================================
+       LIST PRODUCTS (ORG WISE)
+    ============================================ */
     public function list($org_id) {
 
-        $stmt = $this->pdo->prepare("SELECT * FROM products WHERE org_id = ?");
+        $stmt = $this->pdo->prepare("
+            SELECT *
+            FROM products
+            WHERE org_id = ?
+        ");
         $stmt->execute([$org_id]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // --------------------------------------------
-    // GET SINGLE PRODUCT
-    // --------------------------------------------
+    /* ============================================
+       GET SINGLE PRODUCT
+    ============================================ */
     public function find($id, $org_id, $outlet_id) {
 
         $stmt = $this->pdo->prepare("
-            SELECT * FROM products
-            WHERE id = ? AND org_id = ? AND outlet_id = ?
+            SELECT *
+            FROM products
+            WHERE id = ?
+              AND org_id = ?
+              AND outlet_id = ?
             LIMIT 1
         ");
 

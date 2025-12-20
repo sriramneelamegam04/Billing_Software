@@ -2,105 +2,203 @@
 require_once __DIR__.'/../../helpers/response.php';
 require_once __DIR__.'/../../helpers/auth.php';
 require_once __DIR__.'/../../bootstrap/db.php';
+require_once __DIR__.'/../../helpers/barcode.php';
+require_once __DIR__.'/../../models/Product.php';
+require_once __DIR__.'/../../models/ProductVariant.php';
+require_once __DIR__.'/../../models/Subscription.php';
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:3000");
-header("Access-Control-Allow-Methods: POST, PATCH , GET, OPTIONS");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
-    http_response_code(200);
-    exit;
-}
+if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") { http_response_code(200); exit; }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendError("Method Not Allowed", 405);
 
+/* -------------------------------------------------
+   AUTH + SUBSCRIPTION
+------------------------------------------------- */
 $authUser = getCurrentUser();
 if (!$authUser) sendError("Unauthorized", 401);
 
+$subscriptionModel = new Subscription($pdo);
+if (!$subscriptionModel->getActive($authUser['org_id'])) {
+    sendError("Active subscription required", 403);
+}
+
+/* -------------------------------------------------
+   INPUT
+------------------------------------------------- */
 $input = json_decode(file_get_contents('php://input'), true);
-if (!$input || empty($input['product_id']) || empty($input['outlet_id'])) {
-    sendError("product_id and outlet_id are required", 422);
+if (!$input) sendError("Invalid JSON input");
+
+foreach (['product_id','outlet_id'] as $f) {
+    if (!isset($input[$f])) sendError("Field '$f' is required", 422);
 }
 
 $product_id = (int)$input['product_id'];
 $outlet_id  = (int)$input['outlet_id'];
 
-$name       = isset($input['name']) ? trim($input['name']) : '';
-$category   = isset($input['category']) ? trim($input['category']) : '';
-$price      = isset($input['price']) ? (float)$input['price'] : null;
+$name            = array_key_exists('name', $input) ? trim($input['name']) : null;
+$price           = array_key_exists('price', $input) ? (float)$input['price'] : null;
+$category_id     = array_key_exists('category_id', $input) ? (int)$input['category_id'] : null;
+$sub_category_id = array_key_exists('sub_category_id', $input) ? (int)$input['sub_category_id'] : null;
+$gst_rate        = array_key_exists('gst_rate', $input) ? (float)$input['gst_rate'] : null;
 
-$meta       = isset($input['meta']) && is_array($input['meta']) ? $input['meta'] : null;
+/* -------------------------------------------------
+   BASIC VALIDATION
+------------------------------------------------- */
+if ($price !== null && $price <= 0) sendError("Invalid price", 422);
+if ($gst_rate !== null && ($gst_rate < 0 || $gst_rate > 100)) {
+    sendError("Invalid gst_rate", 422);
+}
 
-// Validate outlet
+/* -------------------------------------------------
+   VALIDATE OUTLET
+------------------------------------------------- */
 $stmt = $pdo->prepare("SELECT id FROM outlets WHERE id=? AND org_id=?");
 $stmt->execute([$outlet_id, $authUser['org_id']]);
-if (!$stmt->fetch()) {
-    sendError("Invalid outlet_id or it does not belong to your organization", 403);
-}
+if (!$stmt->fetch()) sendError("Invalid outlet", 403);
 
-// Validate product
-$stmt = $pdo->prepare("SELECT * FROM products WHERE id=? AND outlet_id=? AND org_id=?");
+/* -------------------------------------------------
+   VALIDATE PRODUCT
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT * FROM products
+    WHERE id=? AND outlet_id=? AND org_id=?
+");
 $stmt->execute([$product_id, $outlet_id, $authUser['org_id']]);
 $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-if (!$existing) {
-    sendError("Product not found", 404);
+if (!$existing) sendError("Product not found", 404);
+
+/* -------------------------------------------------
+   VALIDATE CATEGORY (OPTIONAL)
+------------------------------------------------- */
+if ($category_id !== null) {
+    $stmt = $pdo->prepare("
+        SELECT id,name FROM categories
+        WHERE id=? AND org_id=? AND status=1
+    ");
+    $stmt->execute([$category_id, $authUser['org_id']]);
+    if (!$stmt->fetch()) sendError("Invalid category_id", 422);
 }
 
-// Validate fields
-if ($name === '') sendError("Product name cannot be empty", 422);
-if ($price !== null && $price < 0) sendError("Price must be a positive number", 422);
+/* -------------------------------------------------
+   VALIDATE SUB CATEGORY (OPTIONAL)
+------------------------------------------------- */
+if ($sub_category_id !== null) {
+    $stmt = $pdo->prepare("
+        SELECT id FROM sub_categories
+        WHERE id=? AND category_id=? AND status=1
+    ");
+    $stmt->execute([
+        $sub_category_id,
+        $category_id ?? $existing['category_id']
+    ]);
+    if (!$stmt->fetch()) sendError("Invalid sub_category_id", 422);
+}
+
+/* -------------------------------------------------
+   META (ARRAY ONLY)
+------------------------------------------------- */
+$meta = json_decode($existing['meta'], true) ?: [];
+if (isset($input['meta']) && is_array($input['meta'])) {
+    $meta = array_merge($meta, $input['meta']);
+}
+
+/* -------------------------------------------------
+   BARCODE (OPTIONAL UPDATE)
+------------------------------------------------- */
+if (!empty($input['barcode'])) {
+    $meta['barcode'] = preg_replace('/\s+/', '', $input['barcode']);
+}
+
+/* -------------------------------------------------
+   FINAL VALUES
+------------------------------------------------- */
+$final = [
+    'name'            => $name            ?? $existing['name'],
+    'price'           => $price           ?? $existing['price'],
+    'gst_rate'        => $gst_rate        ?? $existing['gst_rate'],
+    'category_id'     => $category_id     ?? $existing['category_id'],
+    'sub_category_id' => $sub_category_id ?? $existing['sub_category_id'],
+    'meta'            => json_encode($meta, JSON_UNESCAPED_UNICODE)
+];
 
 try {
+    $pdo->beginTransaction();
 
-    // Prepare updated meta
-    if ($meta !== null) {
-        $finalMeta = json_encode($meta, JSON_UNESCAPED_UNICODE);
-    } else {
-        $finalMeta = $existing['meta']; // keep existing meta
-    }
-
+    /* -------------------------------------------------
+       UPDATE PRODUCT
+    ------------------------------------------------- */
     $stmt = $pdo->prepare("
-        UPDATE products 
-        SET name=?, category=?, price=?, meta=? 
+        UPDATE products SET
+            name=?,
+            price=?,
+            gst_rate=?,
+            category_id=?,
+            sub_category_id=?,
+            meta=?
         WHERE id=? AND outlet_id=? AND org_id=?
     ");
     $stmt->execute([
-        $name,
-        $category,
-        $price,
-        $finalMeta,
+        $final['name'],
+        $final['price'],
+        $final['gst_rate'],
+        $final['category_id'],
+        $final['sub_category_id'],
+        $final['meta'],
         $product_id,
         $outlet_id,
         $authUser['org_id']
     ]);
 
-    // ================================
-    //  AUDIT LOG (inventory_logs)
-    //  This is optional but professional
-    // ================================
-    $changeInfo = "Product Updated: ";
-    if ($existing['name'] != $name) $changeInfo .= "name change, ";
-    if ($existing['category'] != $category) $changeInfo .= "category change, ";
-    if ($existing['price'] != $price) $changeInfo .= "price change, ";
+    /* -------------------------------------------------
+       VARIANTS (REPLACE MODE)
+    ------------------------------------------------- */
+    if (isset($input['variants']) && is_array($input['variants'])) {
 
-    // Trim last comma
-    $changeInfo = rtrim($changeInfo, ', ');
+        $pdo->prepare("
+            DELETE FROM product_variants WHERE product_id=?
+        ")->execute([$product_id]);
 
-    if ($changeInfo !== "") {
-        $log = $pdo->prepare("
-            INSERT INTO inventory_logs 
-            (org_id, outlet_id, product_id, change_type, quantity_change, reference_id) 
-            VALUES (?, ?, ?, 'manual_adjustment', 0, NULL)
-        ");
-        $log->execute([
-            $authUser['org_id'],
-            $outlet_id,
-            $product_id
-        ]);
+        $pdo->prepare("
+            DELETE FROM inventory WHERE product_id=? AND variant_id IS NOT NULL
+        ")->execute([$product_id]);
+
+        $variantModel = new ProductVariant($pdo);
+
+        foreach ($input['variants'] as $v) {
+            if (empty($v['name']) || empty($v['price'])) continue;
+
+            $variant_id = $variantModel->create([
+                'product_id' => $product_id,
+                'name'       => trim($v['name']),
+                'price'      => (float)$v['price'],
+                'gst_rate'   => (float)($v['gst_rate'] ?? 0)
+            ]);
+
+            $pdo->prepare("
+                INSERT INTO inventory (org_id,outlet_id,product_id,variant_id,quantity)
+                VALUES (?,?,?,?,?)
+            ")->execute([
+                $authUser['org_id'],
+                $outlet_id,
+                $product_id,
+                $variant_id,
+                (int)($v['quantity'] ?? 0)
+            ]);
+        }
     }
 
-    sendSuccess([], "Product updated successfully");
+    $pdo->commit();
+
+    sendSuccess([
+        "product_id" => $product_id,
+        "barcode"    => $meta['barcode'] ?? null
+    ], "Product updated successfully");
 
 } catch (Exception $e) {
-    sendError("Failed to update product: " . $e->getMessage(), 500);
+    $pdo->rollBack();
+    sendError("Failed to update product: ".$e->getMessage(), 500);
 }
-?>

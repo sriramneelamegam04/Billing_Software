@@ -2,87 +2,148 @@
 require_once __DIR__.'/../../helpers/response.php';
 require_once __DIR__.'/../../helpers/auth.php';
 require_once __DIR__.'/../../bootstrap/db.php';
+require_once __DIR__.'/../../models/Subscription.php';
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:3000");
-header("Access-Control-Allow-Methods: POST, PATCH , GET, OPTIONS");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
-    http_response_code(200);
-    exit;
-}
+if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") { http_response_code(200); exit; }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendError("Method Not Allowed", 405);
 
+/* -------------------------------------------------
+   AUTH + SUBSCRIPTION
+------------------------------------------------- */
 $authUser = getCurrentUser();
 if (!$authUser) sendError("Unauthorized", 401);
 
-// Decode input
+$subscriptionModel = new Subscription($pdo);
+if (!$subscriptionModel->getActive($authUser['org_id'])) {
+    sendError("Active subscription required", 403);
+}
+
+/* -------------------------------------------------
+   INPUT
+------------------------------------------------- */
 $input = json_decode(file_get_contents('php://input'), true);
-if (!$input || empty($input['product_id']) || empty($input['outlet_id'])) {
-    sendError("product_id and outlet_id are required", 422);
+if (!$input) sendError("Invalid JSON input");
+
+foreach (['product_id','outlet_id'] as $f) {
+    if (!isset($input[$f])) sendError("Field '$f' is required", 422);
 }
 
 $product_id = (int)$input['product_id'];
 $outlet_id  = (int)$input['outlet_id'];
 
-// Validate outlet
-$stmt = $pdo->prepare("SELECT id FROM outlets WHERE id=? AND org_id=?");
+/* -------------------------------------------------
+   VALIDATE OUTLET
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT id FROM outlets
+    WHERE id=? AND org_id=?
+");
 $stmt->execute([$outlet_id, $authUser['org_id']]);
-if (!$stmt->fetch()) {
-    sendError("Invalid outlet_id or outlet does not belong to your organization", 403);
-}
+if (!$stmt->fetch()) sendError("Invalid outlet", 403);
 
-// Validate product exists
-$stmt = $pdo->prepare("SELECT id FROM products WHERE id=? AND outlet_id=? AND org_id=?");
+/* -------------------------------------------------
+   VALIDATE PRODUCT
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT id, name
+    FROM products
+    WHERE id=? AND outlet_id=? AND org_id=?
+");
 $stmt->execute([$product_id, $outlet_id, $authUser['org_id']]);
-if (!$stmt->fetch()) {
-    sendError("Product not found under this outlet", 404);
-}
+$product = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$product) sendError("Product not found", 404);
 
-// Prevent deletion if linked to sales
-$salesCheck = $pdo->prepare("SELECT COUNT(*) FROM sale_items WHERE product_id=?");
-$salesCheck->execute([$product_id]);
-if ($salesCheck->fetchColumn() > 0) {
-    sendError("Cannot delete this product because it is linked to existing sales", 409);
+/* -------------------------------------------------
+   BLOCK DELETE IF SALES EXIST
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT 1 FROM sale_items
+    WHERE product_id=?
+    LIMIT 1
+");
+$stmt->execute([$product_id]);
+if ($stmt->fetch()) {
+    sendError(
+        "Cannot delete product. It is already used in sales records",
+        409
+    );
 }
 
 try {
     $pdo->beginTransaction();
 
-    // Check current stock before delete
-    $stmt = $pdo->prepare("SELECT quantity FROM inventory WHERE product_id=? AND outlet_id=? AND org_id=?");
-    $stmt->execute([$product_id, $outlet_id, $authUser['org_id']]);
-    $stock = (float)$stmt->fetchColumn();
-
-    // Delete inventory row
-    $invDel = $pdo->prepare("DELETE FROM inventory WHERE product_id=? AND outlet_id=? AND org_id=?");
-    $invDel->execute([$product_id, $outlet_id, $authUser['org_id']]);
-
-    // Insert log for product deletion (optional audit)
-    $log = $pdo->prepare("
-        INSERT INTO inventory_logs (org_id, outlet_id, product_id, change_type, quantity_change, reference_id)
-        VALUES (?, ?, ?, 'manual_adjustment', ?, NULL)
+    /* -------------------------------------------------
+       COLLECT INVENTORY QTY (PRODUCT + VARIANTS)
+    ------------------------------------------------- */
+    $stmt = $pdo->prepare("
+        SELECT COALESCE(SUM(quantity),0)
+        FROM inventory
+        WHERE product_id=? AND outlet_id=? AND org_id=?
     ");
-    $log->execute([
-        $authUser['org_id'],
-        $outlet_id,
+    $stmt->execute([$product_id, $outlet_id, $authUser['org_id']]);
+    $totalQty = (int)$stmt->fetchColumn();
+
+    /* -------------------------------------------------
+       DELETE INVENTORY FIRST (FK SAFE)
+    ------------------------------------------------- */
+    $pdo->prepare("
+        DELETE FROM inventory
+        WHERE product_id=? AND outlet_id=? AND org_id=?
+    ")->execute([
         $product_id,
-        -$stock   // remove remaining stock from record
+        $outlet_id,
+        $authUser['org_id']
     ]);
 
-    // Delete all variants
-    $stmt = $pdo->prepare("DELETE FROM product_variants WHERE product_id=?");
-    $stmt->execute([$product_id]);
+    /* -------------------------------------------------
+       INVENTORY LOG (AUDIT)
+    ------------------------------------------------- */
+    if ($totalQty > 0) {
+        $pdo->prepare("
+            INSERT INTO inventory_logs
+            (org_id, outlet_id, product_id, change_type, quantity_change, reference_id)
+            VALUES (?, ?, ?, 'product_deleted', ?, NULL)
+        ")->execute([
+            $authUser['org_id'],
+            $outlet_id,
+            $product_id,
+            -$totalQty
+        ]);
+    }
 
-    // Delete product
-    $stmt = $pdo->prepare("DELETE FROM products WHERE id=? AND outlet_id=? AND org_id=?");
-    $stmt->execute([$product_id, $outlet_id, $authUser['org_id']]);
+    /* -------------------------------------------------
+       DELETE VARIANTS
+    ------------------------------------------------- */
+    $pdo->prepare("
+        DELETE FROM product_variants
+        WHERE product_id=?
+    ")->execute([$product_id]);
+
+    /* -------------------------------------------------
+       DELETE PRODUCT
+    ------------------------------------------------- */
+    $pdo->prepare("
+        DELETE FROM products
+        WHERE id=? AND outlet_id=? AND org_id=?
+    ")->execute([
+        $product_id,
+        $outlet_id,
+        $authUser['org_id']
+    ]);
 
     $pdo->commit();
-    sendSuccess([], "Product deleted successfully");
+
+    sendSuccess([
+        "product_id"   => $product_id,
+        "product_name" => $product['name']
+    ], "Product deleted successfully");
 
 } catch (Exception $e) {
     $pdo->rollBack();
-    sendError("Failed to delete product: " . $e->getMessage(), 500);
+    sendError("Failed to delete product: ".$e->getMessage(), 500);
 }
-?>
