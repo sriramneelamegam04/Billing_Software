@@ -32,88 +32,125 @@ if (!$subscriptionModel->getActive($authUser['org_id'])) {
 /* -------------------------------------------------
    INPUT
 ------------------------------------------------- */
-if (empty($_GET['variant_id'])) {
-    sendError("variant_id is required", 422);
+if (empty($_GET['product_id'])) {
+    sendError("product_id is required", 422);
 }
 
-$variant_id = (int)$_GET['variant_id'];
+$product_id = (int)$_GET['product_id'];
+
+$page  = isset($_GET['page'])  ? max(1, (int)$_GET['page'])  : 1;
+$limit = isset($_GET['limit']) ? max(1, (int)$_GET['limit']) : 20;
+$offset = ($page - 1) * $limit;
 
 /* -------------------------------------------------
-   FETCH VARIANT + PRODUCT + CATEGORY
+   VALIDATE PRODUCT (ORG SAFE)
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT id, org_id, outlet_id
+    FROM products
+    WHERE id = ?
+    LIMIT 1
+");
+$stmt->execute([$product_id]);
+$product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$product) sendError("Invalid product_id", 404);
+if ((int)$product['org_id'] !== (int)$authUser['org_id']) {
+    sendError("Unauthorized product access", 403);
+}
+
+/* -------------------------------------------------
+   COUNT VARIANTS
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT COUNT(*)
+    FROM product_variants
+    WHERE product_id = ?
+");
+$stmt->execute([$product_id]);
+$total = (int)$stmt->fetchColumn();
+$total_pages = $limit > 0 ? ceil($total / $limit) : 0;
+
+/* -------------------------------------------------
+   FETCH VARIANTS + INVENTORY
 ------------------------------------------------- */
 $stmt = $pdo->prepare("
     SELECT
         v.id   AS variant_id,
-        v.name AS variant_name,
+        v.name,
         v.price,
         v.gst_rate,
-        v.created_at,
-
-        p.id   AS product_id,
-        p.name AS product_name,
-        p.meta,
-        p.org_id,
-        p.outlet_id,
-
-        c.name  AS category_name,
-        sc.name AS sub_category_name
+        v.meta,
+        COALESCE(i.quantity, 0) AS quantity,
+        i.low_stock_limit
     FROM product_variants v
-    JOIN products p ON p.id = v.product_id
-    LEFT JOIN categories c ON c.id = p.category_id
-    LEFT JOIN sub_categories sc ON sc.id = p.sub_category_id
-    WHERE v.id = ?
-    LIMIT 1
+    LEFT JOIN inventory i
+        ON i.variant_id = v.id
+       AND i.product_id = v.product_id
+       AND i.org_id = ?
+       AND i.outlet_id = ?
+    WHERE v.product_id = ?
+    ORDER BY v.id DESC
+    LIMIT ? OFFSET ?
 ");
-$stmt->execute([$variant_id]);
-$row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$row) sendError("Variant not found", 404);
-if ((int)$row['org_id'] !== (int)$authUser['org_id']) {
-    sendError("Unauthorized access to variant", 403);
-}
+$stmt->bindValue(1, $authUser['org_id'], PDO::PARAM_INT);
+$stmt->bindValue(2, $product['outlet_id'], PDO::PARAM_INT);
+$stmt->bindValue(3, $product_id, PDO::PARAM_INT);
+$stmt->bindValue(4, $limit, PDO::PARAM_INT);
+$stmt->bindValue(5, $offset, PDO::PARAM_INT);
+$stmt->execute();
 
-/* -------------------------------------------------
-   FETCH INVENTORY QTY
-------------------------------------------------- */
-$stmt = $pdo->prepare("
-    SELECT quantity
-    FROM inventory
-    WHERE product_id = ?
-      AND variant_id = ?
-      AND org_id = ?
-      AND outlet_id = ?
-    LIMIT 1
-");
-$stmt->execute([
-    $row['product_id'],
-    $variant_id,
-    $authUser['org_id'],
-    $row['outlet_id']
-]);
-$inv = $stmt->fetch(PDO::FETCH_ASSOC);
-
-$quantity = $inv ? (int)$inv['quantity'] : 0;
+$variants = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* -------------------------------------------------
    FORMAT RESPONSE
 ------------------------------------------------- */
-$meta = json_decode($row['meta'], true) ?: [];
+$responseVariants = [];
 
+foreach ($variants as $v) {
+
+    $meta = json_decode($v['meta'], true) ?: [];
+    $barcode = $meta['barcode'] ?? null;
+
+    $base_price = (float)$v['price'];
+    $gst_rate   = (float)$v['gst_rate'];
+
+    $gst_amount = round(($base_price * $gst_rate) / 100, 2);
+    $final      = round($base_price + $gst_amount, 2);
+
+    $responseVariants[] = [
+        "variant_id"      => (int)$v['variant_id'],
+        "name"            => $v['name'],
+        "price"           => $base_price,
+        "gst_rate"        => $gst_rate,
+        "quantity"        => (int)$v['quantity'],
+        "low_stock_limit" => $v['low_stock_limit'] !== null
+                                ? (int)$v['low_stock_limit']
+                                : null,
+
+        // 🔥 DIRECT FIELDS
+        "barcode"         => $barcode,
+
+        // 🔥 PRICE TAG
+        "price_tag"       => [
+            "final_price" => "₹" . number_format($final, 0),
+            "barcode"     => $barcode
+        ],
+
+        // OPTIONAL FULL META
+        "meta"            => $meta
+    ];
+}
+
+/* -------------------------------------------------
+   RESPONSE
+------------------------------------------------- */
 sendSuccess([
-    "variant" => [
-        "variant_id" => (int)$row['variant_id'],
-        "name"       => $row['variant_name'],
-        "price"      => (float)$row['price'],
-        "gst_rate"   => (float)$row['gst_rate'],
-        "quantity"   => $quantity,
-        "created_at" => $row['created_at']
-    ],
-    "product" => [
-        "product_id"        => (int)$row['product_id'],
-        "name"              => $row['product_name'],
-        "barcode"           => $meta['barcode'] ?? null,
-        "category_name"     => $row['category_name'],
-        "sub_category_name" => $row['sub_category_name'],
-        "outlet_id"         => (int)$row['outlet_id']
-    ]
-], "Variant details fetched successfully");
+    "product_id"  => $product_id,
+    "page"        => $page,
+    "limit"       => $limit,
+    "total"       => $total,
+    "total_pages" => $total_pages,
+    "variants"    => $responseVariants
+], "Variants fetched successfully");

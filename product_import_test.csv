@@ -1,0 +1,4 @@
+name,price,outlet_id,category_name,sub_category_name,gst_rate,brand,size,dealer,sku,description,purchase_price,discount_type,discount_value,barcode,product_qty,low_stock_limit,variant_name,variant_price,variant_gst_rate,variant_brand,variant_size,variant_dealer,variant_sku,variant_description,variant_purchase_price,variant_discount_type,variant_discount_value,variant_barcode,variant_qty,variant_low_stock_limit
+masala Tea Powder,100,17,Beverages,Tea,5,TATA,500g,ABC Distributors,TEA-500-TATA,Premium Assam Tea,80,percentage,10,,50,10,1kg Pack,190,5,TATA,1kg,ABC Distributors,TEA-1KG-TATA,Family pack,160,flat,20,,20,5
+masala Coffee Powder,180,17,Beverages,Coffee,5,BRU,250g,XYZ Traders,COF-250-BRU,Strong coffee powder,140,,,,30,5,,,,,,,,,,,,,,
+brown Sugar,45,17,Grocery,Essentials,0,LOCAL,1kg,Local Supplier,SUG-1KG,White sugar,38,,,,100,20,500g Pack,25,0,LOCAL,500g,Local Supplier,SUG-500G,Small pack,20,flat,5,,60,10

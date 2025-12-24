@@ -26,104 +26,121 @@ if (!$authUser) sendError("Unauthorized", 401);
 $org_id = (int)$authUser['org_id'];
 
 /* -------------------------------------------------
-   QUERY PARAMS (SEARCH + PAGINATION)
+   QUERY PARAMS
 ------------------------------------------------- */
-$page   = max(1, (int)($_GET['page'] ?? 1));
-$limit  = min(100, max(1, (int)($_GET['limit'] ?? 20)));
-$offset = ($page - 1) * $limit;
-
-$search      = trim($_GET['search'] ?? '');
-$outlet_id   = isset($_GET['outlet_id']) ? (int)$_GET['outlet_id'] : null;
-$has_barcode = isset($_GET['has_barcode']) ? (int)$_GET['has_barcode'] : null;
+$search    = trim($_GET['search'] ?? '');
+$outlet_id = isset($_GET['outlet_id']) ? (int)$_GET['outlet_id'] : null;
 
 /* -------------------------------------------------
-   WHERE CONDITIONS
+   FETCH PRODUCTS
 ------------------------------------------------- */
 $where  = ["p.org_id = :org_id"];
 $params = ['org_id' => $org_id];
-
-if ($search !== '') {
-    $where[] = "(p.name LIKE :search OR v.name LIKE :search)";
-    $params['search'] = "%$search%";
-}
 
 if ($outlet_id) {
     $where[] = "p.outlet_id = :outlet_id";
     $params['outlet_id'] = $outlet_id;
 }
 
-if ($has_barcode === 1) {
-    $where[] = "JSON_EXTRACT(p.meta,'$.barcode') IS NOT NULL";
+if ($search !== '') {
+    $where[] = "(
+        p.name LIKE :search
+        OR JSON_UNQUOTE(JSON_EXTRACT(p.meta,'$.sku')) LIKE :search
+    )";
+    $params['search'] = "%$search%";
 }
 
 $whereSql = implode(" AND ", $where);
 
-/* -------------------------------------------------
-   FETCH PRODUCTS + VARIANTS
-------------------------------------------------- */
 $sql = "
 SELECT
-    p.id   AS product_id,
-    p.name AS product_name,
-    p.price AS product_price,
-    p.gst_rate AS product_gst,
-    JSON_UNQUOTE(JSON_EXTRACT(p.meta,'$.barcode')) AS barcode,
-
-    v.id   AS variant_id,
-    v.name AS variant_name,
-    v.price AS variant_price,
-    v.gst_rate AS variant_gst
-
+    p.id,
+    p.name,
+    p.price,
+    p.gst_rate,
+    p.meta
 FROM products p
-LEFT JOIN product_variants v ON v.product_id = p.id
 WHERE $whereSql
-ORDER BY p.name ASC, v.name ASC
-LIMIT :limit OFFSET :offset
+ORDER BY p.id DESC
 ";
 
 $stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-foreach ($params as $k => $v) {
-    $stmt->bindValue(":$k", $v);
+if (!$products) {
+    sendSuccess(['products' => []], "Product price tags fetched successfully");
 }
-$stmt->bindValue(":limit", $limit, PDO::PARAM_INT);
-$stmt->bindValue(":offset", $offset, PDO::PARAM_INT);
-
-$stmt->execute();
-$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* -------------------------------------------------
-   BUILD PRICE TAG RESPONSE (FINAL PRICE ONLY)
+   FETCH VARIANTS (ALL AT ONCE)
 ------------------------------------------------- */
-$items = [];
+$productIds = array_column($products, 'id');
+$placeholders = implode(',', array_fill(0, count($productIds), '?'));
 
-foreach ($rows as $r) {
+$vStmt = $pdo->prepare("
+    SELECT
+        id,
+        product_id,
+        name,
+        price,
+        gst_rate,
+        meta
+    FROM product_variants
+    WHERE product_id IN ($placeholders)
+    ORDER BY id ASC
+");
+$vStmt->execute($productIds);
+$variants = $vStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $base_price = $r['variant_price'] ?? $r['product_price'];
-    $gst_rate   = $r['variant_gst'] ?? $r['product_gst'];
+/* -------------------------------------------------
+   GROUP VARIANTS BY PRODUCT
+------------------------------------------------- */
+$variantMap = [];
 
-    $base_price = (float)$base_price;
-    $gst_rate   = (float)$gst_rate;
+foreach ($variants as $v) {
+    $meta = json_decode($v['meta'], true) ?: [];
 
-    $gst_amount = round(($base_price * $gst_rate) / 100, 2);
-    $total      = round($base_price + $gst_amount, 2);
+    $gstAmount = round(($v['price'] * $v['gst_rate']) / 100, 2);
+    $final     = round($v['price'] + $gstAmount, 2);
 
-    $items[] = [
-        'product_id'   => (int)$r['product_id'],
-        'variant_id'   => $r['variant_id'] ? (int)$r['variant_id'] : null,
-        'product_name' => $r['product_name'],
-        'variant_name' => $r['variant_name'],
-        'barcode'      => $r['barcode'],
-        'price'        => '₹' . number_format($total, 0) // 👈 TAG PRICE
+    $variantMap[$v['product_id']][] = [
+        'variant_id' => (int)$v['id'],
+        'name'       => $v['name'],
+        'sku'        => $meta['sku'] ?? null,
+        'size'       => $meta['size'] ?? null,
+        'barcode'    => $meta['barcode'] ?? null,
+        'price_tag'  => [
+            'price' => '₹' . number_format($final, 0)
+        ]
     ];
 }
 
 /* -------------------------------------------------
-   RESPONSE
+   BUILD FINAL RESPONSE
 ------------------------------------------------- */
+$response = [];
+
+foreach ($products as $p) {
+
+    $meta = json_decode($p['meta'], true) ?: [];
+
+    $gstAmount = round(($p['price'] * $p['gst_rate']) / 100, 2);
+    $final     = round($p['price'] + $gstAmount, 2);
+
+    $response[] = [
+        'product_id' => (int)$p['id'],
+        'name'       => $p['name'],
+        'sku'        => $meta['sku'] ?? null,
+        'size'       => $meta['size'] ?? null,
+        'barcode'    => $meta['barcode'] ?? null,
+        'price_tag'  => [
+            'price' => '₹' . number_format($final, 0)
+        ],
+        'variants'   => $variantMap[$p['id']] ?? []
+    ];
+}
+
 sendSuccess([
-    'page'  => $page,
-    'limit' => $limit,
-    'count' => count($items),
-    'items' => $items
+    'products' => $response
 ], "Product price tags fetched successfully");

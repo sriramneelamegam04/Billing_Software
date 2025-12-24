@@ -132,18 +132,21 @@
 				},
 				{
 					"name": "view.php",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
 					"request": {
 						"auth": {
 							"type": "bearer",
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTcwNjc2NDAsIm5iZiI6MTc1NzA2NzY0MCwiZXhwIjoxNzU3MTU0MDQwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo3LCJvcmdfaWQiOjYsInJvbGUiOiJhZG1pbiJ9.Hh34pF1gXpcslkflDpUE4E1TJYVEyjaEccmA3KZEGEA",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYzOTAzMDYsIm5iZiI6MTc2NjM5MDMwNiwiZXhwIjoxNzY2NDc2NzA2LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.0x2R2PAl-852Yo-HLxRAEQyjydOaol6JxPGgJk_cvsc",
 									"type": "string"
 								}
 							]
 						},
-						"method": "POST",
+						"method": "GET",
 						"header": [],
 						"body": {
 							"mode": "raw",
@@ -660,7 +663,7 @@
 									"bearer": [
 										{
 											"key": "token",
-											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYxNDExNTcsIm5iZiI6MTc2NjE0MTE1NywiZXhwIjoxNzY2MjI3NTU3LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8XdUDWXkyNRYY2OTOOcuJ1Qtp7acHZd1SkIWu2K1-Os",
+											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0MDMxOTksIm5iZiI6MTc2NjQwMzE5OSwiZXhwIjoxNzY2NDg5NTk5LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.0KoFcSEtgsSQwMxNlEioRVqdk1_XNKmfhf5PQOS02Kw",
 											"type": "string"
 										}
 									]
@@ -669,7 +672,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n  \"product_id\": 35,\r\n  \"name\": \"250mg Pack\",\r\n  \"price\": 45,\r\n  \"gst_rate\": 5,\r\n  \"quantity\": 25\r\n}\r\n",
+									"raw": "{\r\n  \"product_id\": 121,\r\n  \"name\": \"500ml Bottle\",\r\n  \"price\": 45,\r\n  \"gst_rate\": 5,\r\n  \"quantity\": 20,\r\n  \"low_stock_limit\": 5,\r\n  \"purchase_price\": 32,\r\n  \"discount_type\": \"percentage\",\r\n  \"discount_value\": 10\r\n}\r\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -701,15 +704,15 @@
 									"bearer": [
 										{
 											"key": "token",
-											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0MDMxOTksIm5iZiI6MTc2NjQwMzE5OSwiZXhwIjoxNzY2NDg5NTk5LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.0KoFcSEtgsSQwMxNlEioRVqdk1_XNKmfhf5PQOS02Kw",
 											"type": "string"
 										}
 									]
 								},
-								"method": "POST",
+								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "http://localhost/billing_backend_fixed/apis/products/variant/list.php?product_id=22&page=1&limit=10",
+									"raw": "http://localhost/billing_backend_fixed/apis/products/variant/list.php?product_id=121&page=1&limit=10",
 									"protocol": "http",
 									"host": [
 										"localhost"
@@ -724,7 +727,7 @@
 									"query": [
 										{
 											"key": "product_id",
-											"value": "22"
+											"value": "121"
 										},
 										{
 											"key": "page",
@@ -747,15 +750,15 @@
 									"bearer": [
 										{
 											"key": "token",
-											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYzOTAzMDYsIm5iZiI6MTc2NjM5MDMwNiwiZXhwIjoxNzY2NDc2NzA2LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.0x2R2PAl-852Yo-HLxRAEQyjydOaol6JxPGgJk_cvsc",
 											"type": "string"
 										}
 									]
 								},
-								"method": "POST",
+								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "http://localhost/billing_backend_fixed/apis/products/variant/view.php?variant_id=8",
+									"raw": "http://localhost/billing_backend_fixed/apis/products/variant/view.php?variant_id=67&product_id=121",
 									"protocol": "http",
 									"host": [
 										"localhost"
@@ -770,7 +773,11 @@
 									"query": [
 										{
 											"key": "variant_id",
-											"value": "8"
+											"value": "67"
+										},
+										{
+											"key": "product_id",
+											"value": "121"
 										}
 									]
 								}
@@ -785,7 +792,7 @@
 									"bearer": [
 										{
 											"key": "token",
-											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+											"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYzOTAzMDYsIm5iZiI6MTc2NjM5MDMwNiwiZXhwIjoxNzY2NDc2NzA2LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.0x2R2PAl-852Yo-HLxRAEQyjydOaol6JxPGgJk_cvsc",
 											"type": "string"
 										}
 									]
@@ -794,7 +801,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"variant_id\": 7,\r\n    \"name\": \"1KG Pack\",\r\n    \"price\": 130\r\n}\r\n",
+									"raw": "{\r\n  \"variant_id\": 67,\r\n  \"name\": \"Large Pack\",\r\n  \"price\": 220,\r\n  \"gst_rate\": 18,\r\n  \"quantity\": 25,\r\n  \"low_stock_limit\": 5,\r\n\r\n  \"purchase_price\": 180,\r\n  \"discount_type\": \"percentage\",\r\n  \"discount_value\": 10\r\n}\r\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -862,46 +869,6 @@
 					]
 				},
 				{
-					"name": "create.php",
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYxNDExNTcsIm5iZiI6MTc2NjE0MTE1NywiZXhwIjoxNzY2MjI3NTU3LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8XdUDWXkyNRYY2OTOOcuJ1Qtp7acHZd1SkIWu2K1-Os",
-									"type": "string"
-								}
-							]
-						},
-						"method": "POST",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"name\": \"Tea Powder\",\r\n  \"price\": 100,\r\n  \"gst_rate\": 5,\r\n  \"outlet_id\": 17,\r\n  \"category_id\": 1,\r\n  \"sub_category_id\": 2,\r\n  \"quantity\": 50,\r\n  \"variants\": [\r\n    {\r\n      \"name\": \"500g\",\r\n      \"price\": 100,\r\n      \"quantity\": 20\r\n    },\r\n    {\r\n      \"name\": \"1kg\",\r\n      \"price\": 180,\r\n      \"quantity\": 30\r\n    }\r\n  ]\r\n}\r\n",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "http://localhost/billing_backend_fixed/apis/products/create.php",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"path": [
-								"billing_backend_fixed",
-								"apis",
-								"products",
-								"create.php"
-							]
-						}
-					},
-					"response": []
-				},
-				{
 					"name": "update.php",
 					"request": {
 						"auth": {
@@ -909,7 +876,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYwNDk4MDUsIm5iZiI6MTc2NjA0OTgwNSwiZXhwIjoxNzY2MTM2MjA1LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoyMiwib3JnX2lkIjoxNSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxOSwidmVydGljYWwiOiJyZXRhaWwifQ.i2Lf8Y72tWIXiv_DwzPyBqL_pLBrlw4C-B987fgNu74",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0MDMxOTksIm5iZiI6MTc2NjQwMzE5OSwiZXhwIjoxNzY2NDg5NTk5LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.0KoFcSEtgsSQwMxNlEioRVqdk1_XNKmfhf5PQOS02Kw",
 									"type": "string"
 								}
 							]
@@ -918,7 +885,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"product_id\": 14,\r\n  \"outlet_id\": 4,\r\n  \"name\": \"Coca Cola\",\r\n  \"price\": 40\r\n}\r\n",
+							"raw": "{\r\n  \"product_id\": 123,\r\n  \"outlet_id\": 17,\r\n\r\n  \"name\": \"Tea Powder Premium\",\r\n  \"price\": 110,\r\n  \"gst_rate\": 5,\r\n\r\n  \"brand\": \"Tata\",\r\n  \"size\": \"500g\",\r\n  \"dealer\": \"ABC Distributors\",\r\n  \"sku\": \"TEA-500-TATA\",\r\n  \"description\": \"Updated premium tea\",\r\n  \"purchase_price\": 85,\r\n\r\n  \"discount_type\": \"percentage\",\r\n  \"discount_value\": 12,\r\n\r\n  \"variants\": [\r\n    {\r\n      \"name\": \"1kg Pack\",\r\n      \"price\": 210,\r\n      \"quantity\": 30,\r\n\r\n      \"brand\": \"Tata\",\r\n      \"size\": \"1kg\",\r\n      \"sku\": \"TEA-1KG-TATA\",\r\n      \"description\": \"Family pack updated\",\r\n      \"purchase_price\": 170,\r\n\r\n      \"discount_type\": \"flat\",\r\n      \"discount_value\": 25\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -992,7 +959,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYxNDExNTcsIm5iZiI6MTc2NjE0MTE1NywiZXhwIjoxNzY2MjI3NTU3LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8XdUDWXkyNRYY2OTOOcuJ1Qtp7acHZd1SkIWu2K1-Os",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0ODI1MTAsIm5iZiI6MTc2NjQ4MjUxMCwiZXhwIjoxNzY2NTY4OTEwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8-nBtWv_ZjRg9vddaGf6t_vT28YNAzPQL8lqW9UEvCc",
 									"type": "string"
 								}
 							]
@@ -1009,7 +976,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost/billing_backend_fixed/apis/products/search.php?outlet_id=17&q=",
+							"raw": "http://localhost/billing_backend_fixed/apis/products/search.php?outlet_id=17&q=TEA-500-TATA",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1027,7 +994,7 @@
 								},
 								{
 									"key": "q",
-									"value": ""
+									"value": "TEA-500-TATA"
 								}
 							]
 						}
@@ -1076,18 +1043,21 @@
 				},
 				{
 					"name": "view.php",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
 					"request": {
 						"auth": {
 							"type": "bearer",
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTcwNjc2NDAsIm5iZiI6MTc1NzA2NzY0MCwiZXhwIjoxNzU3MTU0MDQwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo3LCJvcmdfaWQiOjYsInJvbGUiOiJhZG1pbiJ9.Hh34pF1gXpcslkflDpUE4E1TJYVEyjaEccmA3KZEGEA",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0MDMxOTksIm5iZiI6MTc2NjQwMzE5OSwiZXhwIjoxNzY2NDg5NTk5LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.0KoFcSEtgsSQwMxNlEioRVqdk1_XNKmfhf5PQOS02Kw",
 									"type": "string"
 								}
 							]
 						},
-						"method": "POST",
+						"method": "GET",
 						"header": [],
 						"body": {
 							"mode": "raw",
@@ -1099,7 +1069,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost/billing_backend_fixed/apis/products/view.php",
+							"raw": "http://localhost/billing_backend_fixed/apis/products/view.php?id=112",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1109,6 +1079,12 @@
 								"apis",
 								"products",
 								"view.php"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "112"
+								}
 							]
 						}
 					},
@@ -1122,7 +1098,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYxNDExNTcsIm5iZiI6MTc2NjE0MTE1NywiZXhwIjoxNzY2MjI3NTU3LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8XdUDWXkyNRYY2OTOOcuJ1Qtp7acHZd1SkIWu2K1-Os",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0ODI1MTAsIm5iZiI6MTc2NjQ4MjUxMCwiZXhwIjoxNzY2NTY4OTEwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8-nBtWv_ZjRg9vddaGf6t_vT28YNAzPQL8lqW9UEvCc",
 									"type": "string"
 								}
 							]
@@ -1135,7 +1111,7 @@
 								{
 									"key": "file",
 									"type": "file",
-									"src": "/C:/Users/dheer/Downloads/product_import_15_items.csv"
+									"src": "/C:/Users/dheer/Downloads/product_import_test.csv"
 								}
 							]
 						},
@@ -1163,7 +1139,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYwNTI2NTksIm5iZiI6MTc2NjA1MjY1OSwiZXhwIjoxNzY2MTM5MDU5LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.5vyrkoXTpYCVvznSqW6CTrq5Kc8TEoauZSmVPO-bQf8",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0MDMxOTksIm5iZiI6MTc2NjQwMzE5OSwiZXhwIjoxNzY2NDg5NTk5LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.0KoFcSEtgsSQwMxNlEioRVqdk1_XNKmfhf5PQOS02Kw",
 									"type": "string"
 								}
 							]
@@ -1185,12 +1161,75 @@
 						}
 					},
 					"response": []
-				}
-			]
-		},
-		{
-			"name": "sales",
-			"item": [
+				},
+				{
+					"name": "price_tag_view.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0MDMxOTksIm5iZiI6MTc2NjQwMzE5OSwiZXhwIjoxNzY2NDg5NTk5LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.0KoFcSEtgsSQwMxNlEioRVqdk1_XNKmfhf5PQOS02Kw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/products/price_tag_view.php?product_id=121",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"products",
+								"price_tag_view.php"
+							],
+							"query": [
+								{
+									"key": "product_id",
+									"value": "121"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "low_stock_alert.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYzOTAzMDYsIm5iZiI6MTc2NjM5MDMwNiwiZXhwIjoxNzY2NDc2NzA2LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.0x2R2PAl-852Yo-HLxRAEQyjydOaol6JxPGgJk_cvsc",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/products/low_stock_alert.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"products",
+								"low_stock_alert.php"
+							]
+						}
+					},
+					"response": []
+				},
 				{
 					"name": "create.php",
 					"request": {
@@ -1199,7 +1238,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0ODI1MTAsIm5iZiI6MTc2NjQ4MjUxMCwiZXhwIjoxNzY2NTY4OTEwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8-nBtWv_ZjRg9vddaGf6t_vT28YNAzPQL8lqW9UEvCc",
 									"type": "string"
 								}
 							]
@@ -1208,7 +1247,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"outlet_id\": 17,\r\n  \"customer_id\": 5,\r\n  \"discount\": 5,\r\n  \"items\": [\r\n    {\r\n      \"product_id\": 23,\r\n      \"variant_id\": 12,\r\n      \"quantity\": 1\r\n      \r\n    },\r\n    {\r\n      \"product_id\": 25,\r\n      \"variant_id\": 13,\r\n      \"quantity\": 3\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"name\": \"podi Powder\",\r\n  \"price\": 100,\r\n  \"outlet_id\": 17,\r\n  \"category_id\": 1,\r\n  \"sub_category_id\": 2,\r\n  \"gst_rate\": 5,\r\n  \"quantity\": 50,\r\n\r\n  \"brand\": \"Tata\",\r\n  \"size\": \"500g\",\r\n  \"dealer\": \"ABC Distributors\",\r\n  \"sku\": \"TEA-500-TATA\",\r\n  \"description\": \"Premium Assam Tea\",\r\n\r\n  \"purchase_price\": 80,\r\n  \"discount_type\": \"percentage\",\r\n  \"discount_value\": 10,\r\n\r\n  \"variants\": [\r\n    {\r\n      \"name\": \"1kg Pack\",\r\n      \"price\": 190,\r\n      \"quantity\": 20,\r\n\r\n      \"brand\": \"Tata\",\r\n      \"size\": \"1kg\",\r\n      \"sku\": \"TEA-1KG-TATA\",\r\n      \"description\": \"Family pack\",\r\n\r\n      \"purchase_price\": 160,\r\n      \"discount_type\": \"flat\",\r\n      \"discount_value\": 20\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1216,7 +1255,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost/billing_backend_fixed/apis/sales/create.php",
+							"raw": "http://localhost/billing_backend_fixed/apis/products/create.php",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1224,13 +1263,18 @@
 							"path": [
 								"billing_backend_fixed",
 								"apis",
-								"sales",
+								"products",
 								"create.php"
 							]
 						}
 					},
 					"response": []
-				},
+				}
+			]
+		},
+		{
+			"name": "sales",
+			"item": [
 				{
 					"name": "search.php",
 					"request": {
@@ -1325,24 +1369,15 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTcwNjc2NDAsIm5iZiI6MTc1NzA2NzY0MCwiZXhwIjoxNzU3MTU0MDQwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo3LCJvcmdfaWQiOjYsInJvbGUiOiJhZG1pbiJ9.Hh34pF1gXpcslkflDpUE4E1TJYVEyjaEccmA3KZEGEA",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0ODI1MTAsIm5iZiI6MTc2NjQ4MjUxMCwiZXhwIjoxNzY2NTY4OTEwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8-nBtWv_ZjRg9vddaGf6t_vT28YNAzPQL8lqW9UEvCc",
 									"type": "string"
 								}
 							]
 						},
-						"method": "POST",
+						"method": "GET",
 						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"id\": 30\r\n}\r\n",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
 						"url": {
-							"raw": "http://localhost/billing_backend_fixed/apis/sales/view.php",
+							"raw": "http://localhost/billing_backend_fixed/apis/sales/view.php?id=62",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1352,6 +1387,12 @@
 								"apis",
 								"sales",
 								"view.php"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "62"
+								}
 							]
 						}
 					},
@@ -1365,7 +1406,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU1MTUyMjEsIm5iZiI6MTc2NTUxNTIyMSwiZXhwIjoxNzY1NjAxNjIxLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjo4LCJvcmdfaWQiOjksInJvbGUiOiJhZG1pbiIsIm91dGxldF9pZCI6NiwidmVydGljYWwiOiJnZW5lcmljIn0.nq6250ZQlWfasUu-_gRA8fXjMjNECuI6HvYE0qAH2AE",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0ODI1MTAsIm5iZiI6MTc2NjQ4MjUxMCwiZXhwIjoxNzY2NTY4OTEwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8-nBtWv_ZjRg9vddaGf6t_vT28YNAzPQL8lqW9UEvCc",
 									"type": "string"
 								}
 							]
@@ -1374,7 +1415,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"sale_id\": 36,\r\n  \"items\": [\r\n    {\r\n      \"product_id\": 22,\r\n      \"variant_id\": 7,\r\n      \"quantity\": 2,\r\n      \"rate\": 130,\r\n      \"amount\": 260\r\n    }\r\n  ],\r\n  \"total_amount\": 260,\r\n  \"discount\": 0\r\n}",
+							"raw": "{\r\n  \"sale_id\": 61,\r\n  \"items\": [\r\n    {\r\n      \"product_id\": 108,\r\n      \"quantity\": 2\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1392,6 +1433,46 @@
 								"apis",
 								"sales",
 								"update.php"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create.php",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0ODI1MTAsIm5iZiI6MTc2NjQ4MjUxMCwiZXhwIjoxNzY2NTY4OTEwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8-nBtWv_ZjRg9vddaGf6t_vT28YNAzPQL8lqW9UEvCc",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"outlet_id\": 17,\r\n  \"customer_id\": 6,\r\n  \"items\": [\r\n    {\r\n      \"product_id\": 91,\r\n      \"quantity\": 2\r\n      \r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost/billing_backend_fixed/apis/sales/create.php",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"path": [
+								"billing_backend_fixed",
+								"apis",
+								"sales",
+								"create.php"
 							]
 						}
 					},
@@ -1593,6 +1674,14 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "download_csv.php",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
 				}
 			]
 		},
@@ -1724,7 +1813,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYwNTI2NTksIm5iZiI6MTc2NjA1MjY1OSwiZXhwIjoxNzY2MTM5MDU5LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.5vyrkoXTpYCVvznSqW6CTrq5Kc8TEoauZSmVPO-bQf8",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0ODI1MTAsIm5iZiI6MTc2NjQ4MjUxMCwiZXhwIjoxNzY2NTY4OTEwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8-nBtWv_ZjRg9vddaGf6t_vT28YNAzPQL8lqW9UEvCc",
 									"type": "string"
 								}
 							]
@@ -1733,7 +1822,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"sale_id\": 57,\r\n  \"payment_mode\": \"cash\",\r\n  \"meta\": {\r\n    \"redeem_points\": 5,\r\n    \"note\": \"Paid at counter\"\r\n  }\r\n}\r\n",
+							"raw": "{\r\n  \"sale_id\": 59,\r\n  \"payment_mode\": \"cash\",\r\n  \"meta\": {\r\n    \"redeem_points\": 5,\r\n    \"note\": \"Paid at counter\"\r\n  }\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1854,7 +1943,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYwNTI2NTksIm5iZiI6MTc2NjA1MjY1OSwiZXhwIjoxNzY2MTM5MDU5LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.5vyrkoXTpYCVvznSqW6CTrq5Kc8TEoauZSmVPO-bQf8",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0ODI1MTAsIm5iZiI6MTc2NjQ4MjUxMCwiZXhwIjoxNzY2NTY4OTEwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8-nBtWv_ZjRg9vddaGf6t_vT28YNAzPQL8lqW9UEvCc",
 									"type": "string"
 								}
 							]
@@ -1863,7 +1952,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"sale_id\": 55,\r\n  \"outlet_id\": 17\r\n}\r\n",
+							"raw": "{\r\n  \"sale_id\": 59,\r\n  \"outlet_id\": 17\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1894,7 +1983,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYwNTI2NTksIm5iZiI6MTc2NjA1MjY1OSwiZXhwIjoxNzY2MTM5MDU5LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.5vyrkoXTpYCVvznSqW6CTrq5Kc8TEoauZSmVPO-bQf8",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjY0ODI1MTAsIm5iZiI6MTc2NjQ4MjUxMCwiZXhwIjoxNzY2NTY4OTEwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.8-nBtWv_ZjRg9vddaGf6t_vT28YNAzPQL8lqW9UEvCc",
 									"type": "string"
 								}
 							]
@@ -1903,7 +1992,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"sale_id\": 55,\r\n  \"outlet_id\": 17\r\n}\r\n",
+							"raw": "{\r\n  \"sale_id\": 59,\r\n  \"outlet_id\": 17\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1942,7 +2031,7 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYzOTAzMDYsIm5iZiI6MTc2NjM5MDMwNiwiZXhwIjoxNzY2NDc2NzA2LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.0x2R2PAl-852Yo-HLxRAEQyjydOaol6JxPGgJk_cvsc",
 									"type": "string"
 								}
 							]
@@ -2412,12 +2501,12 @@
 							"bearer": [
 								{
 									"key": "token",
-									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU4NjMzOTAsIm5iZiI6MTc2NTg2MzM5MCwiZXhwIjoxNzY1OTQ5NzkwLCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxN30.hAmIyOVtp_foZ49FTHosno71MZYZQqh-YLGnE-N40sw",
+									"value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjYzOTAzMDYsIm5iZiI6MTc2NjM5MDMwNiwiZXhwIjoxNzY2NDc2NzA2LCJpc3MiOiJiaWxsaW5nLWJhY2tlbmQiLCJ1c2VyX2lkIjoxOSwib3JnX2lkIjoxMSwicm9sZSI6ImFkbWluIiwib3V0bGV0X2lkIjoxNywidmVydGljYWwiOiJyZXRhaWwifQ.0x2R2PAl-852Yo-HLxRAEQyjydOaol6JxPGgJk_cvsc",
 									"type": "string"
 								}
 							]
 						},
-						"method": "POST",
+						"method": "GET",
 						"header": [],
 						"url": {
 							"raw": "http://localhost/billing_backend_fixed/apis/reports/profit_loss.php?org_id=11",

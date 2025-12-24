@@ -39,7 +39,7 @@ $stmt->execute([$outlet_id, $authUser['org_id']]);
 if (!$stmt->fetch()) sendError("Invalid outlet_id", 403);
 
 /* -------------------------------------------------
-   FETCH PRODUCTS + PRODUCT INVENTORY
+   FETCH PRODUCTS + INVENTORY (SKU + BARCODE SEARCH)
 ------------------------------------------------- */
 $sql = "
     SELECT
@@ -62,6 +62,7 @@ $sql = "
        AND i.outlet_id = p.outlet_id
     WHERE p.org_id=? AND p.outlet_id=?
 ";
+
 $params = [$authUser['org_id'], $authUser['org_id'], $outlet_id];
 
 if ($q !== '') {
@@ -71,12 +72,19 @@ if ($q !== '') {
             OR c.name LIKE ?
             OR sc.name LIKE ?
             OR JSON_UNQUOTE(JSON_EXTRACT(p.meta,'$.barcode')) LIKE ?
+            OR JSON_UNQUOTE(JSON_EXTRACT(p.meta,'$.sku')) LIKE ?
+            OR EXISTS (
+                SELECT 1 FROM product_variants v
+                WHERE v.product_id = p.id
+                  AND JSON_UNQUOTE(JSON_EXTRACT(v.meta,'$.sku')) LIKE ?
+            )
         )
     ";
-    $params[] = "%$q%";
-    $params[] = "%$q%";
-    $params[] = "%$q%";
-    $params[] = "%$q%";
+    array_push(
+        $params,
+        "%$q%", "%$q%", "%$q%",
+        "%$q%", "%$q%", "%$q%"
+    );
 }
 
 $sql .= " ORDER BY p.id DESC";
@@ -90,10 +98,10 @@ if (!$rows) {
 }
 
 /* -------------------------------------------------
-   FETCH VARIANTS + VARIANT INVENTORY
+   FETCH VARIANTS + INVENTORY
 ------------------------------------------------- */
 $productIds = array_column($rows, 'id');
-$in = implode(',', array_fill(0, count($productIds), '?'));
+$placeholders = implode(',', array_fill(0, count($productIds), '?'));
 
 $vStmt = $pdo->prepare("
     SELECT
@@ -102,6 +110,7 @@ $vStmt = $pdo->prepare("
         v.name,
         v.price,
         v.gst_rate,
+        v.meta,
         COALESCE(i.quantity,0) AS quantity
     FROM product_variants v
     LEFT JOIN inventory i
@@ -109,53 +118,117 @@ $vStmt = $pdo->prepare("
        AND i.product_id = v.product_id
        AND i.org_id = ?
        AND i.outlet_id = ?
-    WHERE v.product_id IN ($in)
+    WHERE v.product_id IN ($placeholders)
 ");
+
 $vStmt->execute(array_merge(
     [$authUser['org_id'], $outlet_id],
     $productIds
 ));
+
 $variantRows = $vStmt->fetchAll(PDO::FETCH_ASSOC);
 
-/* -------------------------------------------------
-   GROUP VARIANTS BY PRODUCT
-------------------------------------------------- */
-$variantsByProduct = [];
-foreach ($variantRows as $v) {
-    $variantsByProduct[$v['product_id']][] = [
-        "variant_id" => (int)$v['id'],
-        "name"       => $v['name'],
-        "price"      => (float)$v['price'],
-        "gst_rate"   => (float)$v['gst_rate'],
-        "quantity"   => (int)$v['quantity']
+
+function applyDiscount(float $price, array $discount = null): array
+{
+    $discount_amount = 0;
+    $final_price = $price;
+
+    if ($discount && isset($discount['type'], $discount['value'])) {
+        if ($discount['type'] === 'percentage') {
+            $discount_amount = round(($price * $discount['value']) / 100, 2);
+        } elseif ($discount['type'] === 'flat') {
+            $discount_amount = round($discount['value'], 2);
+        }
+
+        $final_price = max(0, round($price - $discount_amount, 2));
+    }
+
+    return [
+        'original_price'   => $price,
+        'discount_amount'  => $discount_amount,
+        'discounted_price' => $final_price
     ];
 }
 
 /* -------------------------------------------------
-   FINAL RESPONSE (FULL META)
+   GROUP VARIANTS BY PRODUCT (SAFE META)
 ------------------------------------------------- */
+$variantsByProduct = [];
+
+foreach ($variantRows as $v) {
+
+    $vMeta = json_decode($v['meta'], true);
+    if (!is_array($vMeta)) $vMeta = [];
+
+    $vd = applyDiscount(
+    (float)$v['price'],
+    $vMeta['discount'] ?? null
+);
+
+
+    $variantsByProduct[$v['product_id']][] = [
+        "variant_id"      => (int)$v['id'],
+        "name"            => $v['name'],
+        /* PRICES */
+    "price"            => $vd['original_price'],
+    "discount_amount"  => $vd['discount_amount'],
+    "discounted_price" => $vd['discounted_price'],
+        "gst_rate"        => (float)$v['gst_rate'],
+        "quantity"        => (int)$v['quantity'],
+
+        /* FULL META */
+        "meta"            => $vMeta,
+
+        /* CONVENIENCE */
+        "barcode"         => $vMeta['barcode'] ?? null,
+        "sku"             => $vMeta['sku'] ?? null,
+        "purchase_price"  => $vMeta['purchase_price'] ?? null,
+        "discount"        => $vMeta['discount'] ?? null
+    ];
+}
+
+/* -------------------------------------------------
+   FINAL RESPONSE
+------------------------------------------------- */
+
+
+
 $products = [];
 
 foreach ($rows as $r) {
 
-    $meta = json_decode($r['meta'], true) ?: [];
+    $meta = json_decode($r['meta'], true);
+    if (!is_array($meta)) $meta = [];
+
+    $discountData = applyDiscount(
+    (float)$r['price'],
+    $meta['discount'] ?? null
+);
 
     $products[] = [
         "product_id"        => (int)$r['id'],
         "name"              => $r['name'],
-        "price"             => (float)$r['price'],
+        /* PRICES */
+    "price"            => $discountData['original_price'],
+    "discount_amount"  => $discountData['discount_amount'],
+    "discounted_price" => $discountData['discounted_price'],
         "gst_rate"          => (float)$r['gst_rate'],
+        "outlet_id"         => (int)$r['outlet_id'],
+        "quantity"          => (int)$r['product_quantity'],
 
-        // 🔥 FULL META OBJECT
+        /* FULL META */
         "meta"              => $meta,
 
-        // 🔥 kept for convenience
+        /* CONVENIENCE */
         "barcode"           => $meta['barcode'] ?? null,
+        "sku"               => $meta['sku'] ?? null,
+        "purchase_price"    => $meta['purchase_price'] ?? null,
+        "discount"          => $meta['discount'] ?? null,
 
         "category_name"     => $r['category_name'],
         "sub_category_name" => $r['sub_category_name'],
-        "outlet_id"         => (int)$r['outlet_id'],
-        "quantity"          => (int)$r['product_quantity'],
+
         "variants"          => $variantsByProduct[$r['id']] ?? []
     ];
 }

@@ -5,7 +5,6 @@ require_once __DIR__.'/../../helpers/validation.php';
 require_once __DIR__.'/../../bootstrap/db.php';
 require_once __DIR__.'/../../services/BillingService.php';
 require_once __DIR__.'/../../services/SubscriptionService.php';
-require_once __DIR__.'/../../services/HookService.php';
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:3000");
@@ -44,81 +43,92 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$sale_id, $authUser['org_id']]);
 $sale = $stmt->fetch(PDO::FETCH_ASSOC);
-
 if (!$sale) sendError("Sale not found", 404);
 
-/* -------------------------------------------------
-   OUTLET
-------------------------------------------------- */
-$outlet_id = $sale['outlet_id'];
+$outlet_id   = (int)$sale['outlet_id'];
+$customer_id = (int)$sale['customer_id'];
 
+/* -------------------------------------------------
+   FETCH OUTLET
+------------------------------------------------- */
 $stmt = $pdo->prepare("
     SELECT id, name
     FROM outlets
     WHERE id=? AND org_id=?
-    LIMIT 1
 ");
 $stmt->execute([$outlet_id, $authUser['org_id']]);
 $outlet = $stmt->fetch(PDO::FETCH_ASSOC);
-
 if (!$outlet) sendError("Invalid outlet", 403);
 
 /* -------------------------------------------------
-   ITEMS (OPTIONAL UPDATE)
+   ITEMS
 ------------------------------------------------- */
 $items = $input['items'] ?? [];
+if (empty($items)) sendError("items required");
 
-if (!empty($items)) {
+/* =================================================
+   BARCODE + RATE RESOLUTION
+================================================= */
+foreach ($items as &$item) {
 
-    foreach ($items as &$item) {
-
-        if (!empty($item['barcode']) && empty($item['product_id'])) {
-            $stmt = $pdo->prepare("
-                SELECT id FROM products
-                WHERE org_id=? AND outlet_id=?
-                AND JSON_UNQUOTE(JSON_EXTRACT(meta,'$.barcode'))=?
-            ");
-            $stmt->execute([
-                $authUser['org_id'],
-                $outlet_id,
-                trim($item['barcode'])
-            ]);
-            $item['product_id'] = (int)$stmt->fetchColumn();
-            if (!$item['product_id']) sendError("Invalid barcode");
-        }
-
-        if (empty($item['product_id']) || empty($item['quantity'])) {
-            sendError("product_id and quantity required");
-        }
-
-        $item['variant_id'] = $item['variant_id'] ?? null;
-
-        if (!isset($item['rate']) || $item['rate'] === "") {
-            if ($item['variant_id']) {
-                $stmt = $pdo->prepare("SELECT price FROM product_variants WHERE id=?");
-                $stmt->execute([$item['variant_id']]);
-            } else {
-                $stmt = $pdo->prepare("SELECT price FROM products WHERE id=?");
-                $stmt->execute([$item['product_id']]);
-            }
-            $item['rate'] = (float)$stmt->fetchColumn();
-        }
-
-        if ($item['rate'] <= 0) sendError("Invalid rate");
+    if (!empty($item['barcode']) && empty($item['product_id'])) {
+        $stmt = $pdo->prepare("
+            SELECT id FROM products
+            WHERE org_id=? AND outlet_id=?
+            AND JSON_UNQUOTE(JSON_EXTRACT(meta,'$.barcode'))=?
+        ");
+        $stmt->execute([
+            $authUser['org_id'],
+            $outlet_id,
+            trim($item['barcode'])
+        ]);
+        $item['product_id'] = (int)$stmt->fetchColumn();
+        if (!$item['product_id']) sendError("Invalid barcode");
     }
-    unset($item);
+
+    if (empty($item['product_id']) || empty($item['quantity'])) {
+        sendError("product_id and quantity required");
+    }
+
+    $item['variant_id'] = $item['variant_id'] ?? null;
+
+    if (!isset($item['rate']) || $item['rate'] === "") {
+        if ($item['variant_id']) {
+            $stmt = $pdo->prepare("SELECT price FROM product_variants WHERE id=?");
+            $stmt->execute([$item['variant_id']]);
+        } else {
+            $stmt = $pdo->prepare("SELECT price FROM products WHERE id=?");
+            $stmt->execute([$item['product_id']]);
+        }
+        $item['rate'] = (float)$stmt->fetchColumn();
+    }
+
+    if ($item['rate'] <= 0) sendError("Invalid rate");
+}
+unset($item);
+
+/* =================================================
+   DISCOUNT HELPER
+================================================= */
+function getItemDiscount(PDO $pdo, int $product_id, ?int $variant_id): array
+{
+    if ($variant_id) {
+        $stmt = $pdo->prepare("SELECT meta FROM product_variants WHERE id=?");
+        $stmt->execute([$variant_id]);
+    } else {
+        $stmt = $pdo->prepare("SELECT meta FROM products WHERE id=?");
+        $stmt->execute([$product_id]);
+    }
+    $meta = json_decode($stmt->fetchColumn(), true) ?: [];
+    return $meta['discount'] ?? [];
 }
 
-/* -------------------------------------------------
-   GST CALCULATION (SAME AS CREATE)
-------------------------------------------------- */
+/* =================================================
+   GST + DISCOUNT CALCULATION (SAME AS CREATE)
+================================================= */
 $gst_type = 'CGST_SGST';
 
-$taxable_total = 0;
-$cgst_total = 0;
-$sgst_total = 0;
-$igst_total = 0;
-$grand_total = 0;
+$taxable_total = $cgst_total = $sgst_total = $igst_total = $grand_total = 0;
 
 foreach ($items as &$item) {
 
@@ -134,10 +144,23 @@ foreach ($items as &$item) {
     $rate = (float)$item['rate'];
     $qty  = (float)$item['quantity'];
 
-    $taxable = round($rate * $qty, 2);
-    $gst_amt = round(($taxable * $gst_rate) / 100, 2);
+    $discount = getItemDiscount($pdo, $item['product_id'], $item['variant_id']);
+    $discount_amount = 0;
 
+    if (!empty($discount)) {
+        if ($discount['type'] === 'percentage') {
+            $discount_amount = ($rate * $discount['value']) / 100;
+        } elseif ($discount['type'] === 'flat') {
+            $discount_amount = $discount['value'];
+        }
+    }
+
+    $final_rate = max(0, round($rate - $discount_amount, 2));
+    $taxable    = round($final_rate * $qty, 2);
+
+    $gst_amt = round(($taxable * $gst_rate) / 100, 2);
     $cgst = $sgst = $igst = 0;
+
     if ($gst_type === 'CGST_SGST') {
         $cgst = round($gst_amt / 2, 2);
         $sgst = round($gst_amt / 2, 2);
@@ -147,40 +170,31 @@ foreach ($items as &$item) {
 
     $line_total = round($taxable + $cgst + $sgst + $igst, 2);
 
-    $item['taxable_amount'] = $taxable;
-    $item['gst_rate'] = $gst_rate;
-    $item['cgst'] = $cgst;
-    $item['sgst'] = $sgst;
-    $item['igst'] = $igst;
-    $item['amount'] = $line_total;
+    $item['original_rate']   = $rate;
+    $item['discount']        = $discount;
+    $item['discount_amount'] = round($discount_amount, 2);
+    $item['rate']            = $final_rate;
+    $item['taxable_amount']  = $taxable;
+    $item['gst_rate']        = $gst_rate;
+    $item['cgst']            = $cgst;
+    $item['sgst']            = $sgst;
+    $item['igst']            = $igst;
+    $item['amount']          = $line_total;
 
     $taxable_total += $taxable;
-    $cgst_total += $cgst;
-    $sgst_total += $sgst;
-    $igst_total += $igst;
-    $grand_total += $line_total;
+    $cgst_total    += $cgst;
+    $sgst_total    += $sgst;
+    $igst_total    += $igst;
+    $grand_total   += $line_total;
 }
 unset($item);
 
-$round_off = round($grand_total) - $grand_total;
+$round_off   = round($grand_total) - $grand_total;
 $final_total = round($grand_total);
 
-/* -------------------------------------------------
-   UPDATE PAYLOAD
-------------------------------------------------- */
-$updateData = [
-    'items'          => $items,
-    'taxable_amount' => round($taxable_total,2),
-    'cgst'           => round($cgst_total,2),
-    'sgst'           => round($sgst_total,2),
-    'igst'           => round($igst_total,2),
-    'round_off'      => round($round_off,2),
-    'total_amount'   => $final_total
-];
-
-/* -------------------------------------------------
-   SAVE
-------------------------------------------------- */
+/* =================================================
+   UPDATE SALE
+================================================= */
 try {
     $pdo->beginTransaction();
 
@@ -188,21 +202,54 @@ try {
         ->checkActive($authUser['org_id']);
 
     $billing = new BillingService($pdo);
-    $billing->updateSale($authUser['org_id'], $sale_id, $sale, $updateData);
+    $billing->updateSale($authUser['org_id'], $sale_id, $sale, [
+        'items'          => $items,
+        'taxable_amount' => round($taxable_total,2),
+        'cgst'           => round($cgst_total,2),
+        'sgst'           => round($sgst_total,2),
+        'igst'           => round($igst_total,2),
+        'round_off'      => round($round_off,2),
+        'total_amount'   => $final_total
+    ]);
+
+    /* ---------- FETCH EXISTING LOYALTY ---------- */
+    $stmt = $pdo->prepare("
+        SELECT points_earned
+        FROM loyalty_points
+        WHERE sale_id=?
+        LIMIT 1
+    ");
+    $stmt->execute([$sale_id]);
+    $loyalty_earned = (float)$stmt->fetchColumn();
 
     $pdo->commit();
 
+    /* =================================================
+       RESPONSE (SAME FORMAT AS CREATE)
+    ================================================= */
+    $total_discount = 0;
+    foreach ($items as $it) {
+        $total_discount += (float)($it['discount_amount'] ?? 0) * (float)$it['quantity'];
+    }
+
     sendSuccess([
-        "sale_id" => $sale_id,
-        "outlet"  => $outlet,
-        "items"   => $items,
+        "sale_id"     => $sale_id,
+        "outlet"      => $outlet,
+        "customer_id" => $customer_id,
+        "items"       => $items,
         "summary" => [
             "taxable_amount" => round($taxable_total,2),
-            "cgst" => round($cgst_total,2),
-            "sgst" => round($sgst_total,2),
-            "igst" => round($igst_total,2),
-            "round_off" => round($round_off,2),
-            "grand_total" => $final_total
+            "discount_total" => round($total_discount,2),
+            "cgst"           => round($cgst_total,2),
+            "sgst"           => round($sgst_total,2),
+            "igst"           => round($igst_total,2),
+            "round_off"      => round($round_off,2),
+            "grand_total"    => $final_total
+        ],
+        "loyalty" => [
+            "points_earned" => $loyalty_earned,
+            "basis"         => "1 point per ₹100",
+            "sale_id"       => $sale_id
         ]
     ], "Sale updated successfully");
 

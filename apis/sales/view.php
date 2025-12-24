@@ -30,7 +30,7 @@ if (!$subscriptionModel->getActive($authUser['org_id'])) {
 }
 
 /* -------------------------------------------------
-   INPUT (QUERY PARAMS)
+   INPUT
 ------------------------------------------------- */
 $sale_id    = isset($_GET['id']) ? (int)$_GET['id'] : null;
 $invoice_no = isset($_GET['invoice_no']) ? trim($_GET['invoice_no']) : null;
@@ -54,6 +54,7 @@ $sql = "
         s.igst,
         s.round_off,
         s.total_amount,
+        s.meta,
         s.created_at
     FROM sales s
     INNER JOIN outlets o ON o.id = s.outlet_id
@@ -86,7 +87,7 @@ if (!$sale) {
 }
 
 /* -------------------------------------------------
-   FETCH SALE ITEMS
+   FETCH SALE ITEMS (BASE)
 ------------------------------------------------- */
 $stmt = $pdo->prepare("
     SELECT
@@ -111,7 +112,68 @@ $stmt->execute([$sale['id']]);
 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* -------------------------------------------------
-   FORMAT RESPONSE
+   META (DISCOUNT SNAPSHOT)
+------------------------------------------------- */
+$meta = json_decode($sale['meta'], true) ?: [];
+$itemMetaMap = [];
+
+if (!empty($meta['items_summary'])) {
+    foreach ($meta['items_summary'] as $m) {
+        $key = $m['product_id'].'_'.$m['variant_id'];
+        $itemMetaMap[$key] = $m;
+    }
+}
+
+/* -------------------------------------------------
+   LOYALTY POINTS
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT points_earned
+    FROM loyalty_points
+    WHERE sale_id = ?
+    LIMIT 1
+");
+$stmt->execute([$sale['id']]);
+$loyalty_earned = (float)$stmt->fetchColumn();
+
+/* -------------------------------------------------
+   FORMAT ITEMS + DISCOUNT
+------------------------------------------------- */
+$discount_total = 0;
+
+$formattedItems = array_map(function ($i) use (&$discount_total, $itemMetaMap) {
+
+    $key = $i['product_id'].'_'.$i['variant_id'];
+    $meta = $itemMetaMap[$key] ?? [];
+
+    $discount_amount = (float)($meta['discount_amount'] ?? 0);
+    $discount_total += $discount_amount * (float)$i['quantity'];
+
+    return [
+        "product_id"       => (int)$i['product_id'],
+        "variant_id"       => $i['variant_id'] ? (int)$i['variant_id'] : null,
+        "product_name"     => $i['product_name'],
+        "variant_name"     => $i['variant_name'],
+        "quantity"         => (float)$i['quantity'],
+
+        "original_rate"    => (float)($meta['original_rate'] ?? $i['rate']),
+        "discount"         => $meta['discount'] ?? null,
+        "discount_amount"  => $discount_amount,
+
+        "final_rate"       => (float)$i['rate'],
+        "taxable_amount"   => (float)$i['taxable_amount'],
+
+        "gst_rate"         => (float)$i['gst_rate'],
+        "cgst"             => (float)$i['cgst'],
+        "sgst"             => (float)$i['sgst'],
+        "igst"             => (float)$i['igst'],
+
+        "line_total"       => (float)$i['amount']
+    ];
+}, $items);
+
+/* -------------------------------------------------
+   RESPONSE
 ------------------------------------------------- */
 sendSuccess([
     "sale" => [
@@ -120,27 +182,18 @@ sendSuccess([
         "outlet_id"      => (int)$sale['outlet_id'],
         "customer_id"    => (int)$sale['customer_id'],
         "taxable_amount" => (float)$sale['taxable_amount'],
+        "discount_total" => round($discount_total, 2),
         "cgst"           => (float)$sale['cgst'],
         "sgst"           => (float)$sale['sgst'],
         "igst"           => (float)$sale['igst'],
         "round_off"      => (float)$sale['round_off'],
-        "total_amount"   => (float)$sale['total_amount'],
+        "grand_total"    => (float)$sale['total_amount'],
         "created_at"     => $sale['created_at']
     ],
-    "items" => array_map(function ($i) {
-        return [
-            "product_id"     => (int)$i['product_id'],
-            "variant_id"     => $i['variant_id'] ? (int)$i['variant_id'] : null,
-            "product_name"   => $i['product_name'],
-            "variant_name"   => $i['variant_name'],
-            "quantity"       => (float)$i['quantity'],
-            "rate"           => (float)$i['rate'],
-            "gst_rate"       => (float)$i['gst_rate'],
-            "taxable_amount" => (float)$i['taxable_amount'],
-            "cgst"           => (float)$i['cgst'],
-            "sgst"           => (float)$i['sgst'],
-            "igst"           => (float)$i['igst'],
-            "amount"         => (float)$i['amount']
-        ];
-    }, $items)
+    "items" => $formattedItems,
+    "loyalty" => [
+        "points_earned" => $loyalty_earned,
+        "basis"         => "1 point per ₹100",
+        "sale_id"       => (int)$sale['id']
+    ]
 ], "Sale fetched successfully");

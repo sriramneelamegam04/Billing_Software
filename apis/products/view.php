@@ -40,7 +40,7 @@ if (!$product_id && !$barcode) {
 }
 
 /* -------------------------------------------------
-   FETCH PRODUCT + PRODUCT INVENTORY
+   FETCH PRODUCT + INVENTORY
 ------------------------------------------------- */
 $sql = "
     SELECT
@@ -52,7 +52,8 @@ $sql = "
         p.meta,
         c.name  AS category_name,
         sc.name AS sub_category_name,
-        COALESCE(i.quantity,0) AS product_quantity
+        COALESCE(i.quantity,0) AS product_quantity,
+        i.low_stock_limit AS product_low_stock_limit
     FROM products p
     INNER JOIN outlets o ON o.id = p.outlet_id
     LEFT JOIN categories c ON c.id = p.category_id
@@ -67,17 +68,13 @@ $sql = "
 
 $params = [$authUser['org_id'], $authUser['org_id']];
 
-/* -------------------------------------------------
-   ROLE BASED FILTER
-------------------------------------------------- */
+/* ROLE BASED */
 if ($authUser['role'] !== 'admin') {
     $sql .= " AND p.outlet_id = ?";
     $params[] = $authUser['outlet_id'];
 }
 
-/* -------------------------------------------------
-   PRODUCT FILTER
-------------------------------------------------- */
+/* FILTER */
 if ($product_id) {
     $sql .= " AND p.id = ?";
     $params[] = $product_id;
@@ -97,7 +94,7 @@ if (!$product) {
 }
 
 /* -------------------------------------------------
-   FETCH VARIANTS + VARIANT INVENTORY
+   FETCH VARIANTS + INVENTORY
 ------------------------------------------------- */
 $stmt = $pdo->prepare("
     SELECT
@@ -105,7 +102,9 @@ $stmt = $pdo->prepare("
         v.name,
         v.price,
         v.gst_rate,
-        COALESCE(i.quantity,0) AS quantity
+        v.meta,
+        COALESCE(i.quantity,0) AS quantity,
+        i.low_stock_limit
     FROM product_variants v
     LEFT JOIN inventory i
         ON i.variant_id = v.id
@@ -115,17 +114,19 @@ $stmt = $pdo->prepare("
     WHERE v.product_id = ?
     ORDER BY v.id ASC
 ");
+
 $stmt->execute([
     $authUser['org_id'],
     $product['outlet_id'],
     $product['id']
 ]);
+
 $variants = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* -------------------------------------------------
-   FORMAT RESPONSE (SEARCH.PHP STYLE)
+   FORMAT RESPONSE
 ------------------------------------------------- */
-$meta = json_decode($product['meta'], true) ?: [];
+$productMeta = json_decode($product['meta'], true) ?: [];
 
 $response = [
     "product_id"        => (int)$product['id'],
@@ -136,20 +137,38 @@ $response = [
     "sub_category_name" => $product['sub_category_name'],
     "outlet_id"         => (int)$product['outlet_id'],
     "quantity"          => (int)$product['product_quantity'],
+    "low_stock_limit"   => $product['product_low_stock_limit'] !== null
+                            ? (int)$product['product_low_stock_limit']
+                            : null,
 
-    // 🔥 FULL META (barcode + brand + size + anything)
-    "meta"              => $meta,
+    /* 🔥 PRODUCT BARCODE DIRECT */
+    "barcode"           => $productMeta['barcode'] ?? null,
+
+    /* 🔥 FULL META */
+    "meta"              => $productMeta,
 
     "variants"          => []
 ];
 
 foreach ($variants as $v) {
+
+    $variantMeta = json_decode($v['meta'], true) ?: [];
+
     $response['variants'][] = [
-        "variant_id" => (int)$v['id'],
-        "name"       => $v['name'],
-        "price"      => (float)$v['price'],
-        "gst_rate"   => (float)$v['gst_rate'],
-        "quantity"   => (int)$v['quantity']
+        "variant_id"      => (int)$v['id'],
+        "name"            => $v['name'],
+        "price"           => (float)$v['price'],
+        "gst_rate"        => (float)$v['gst_rate'],
+        "quantity"        => (int)$v['quantity'],
+        "low_stock_limit" => $v['low_stock_limit'] !== null
+                                ? (int)$v['low_stock_limit']
+                                : null,
+
+        /* 🔥 VARIANT BARCODE DIRECT */
+        "barcode"         => $variantMeta['barcode'] ?? null,
+
+        /* 🔥 FULL META */
+        "meta"            => $variantMeta
     ];
 }
 

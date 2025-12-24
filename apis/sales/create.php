@@ -128,9 +128,21 @@ foreach ($input['items'] as &$item) {
 }
 unset($item);
 
-/* =================================================
-   ITEM LEVEL GST CALCULATION (TABLE MATCHED)
-================================================= */
+function getItemDiscount(PDO $pdo, int $product_id, ?int $variant_id): array
+{
+    if ($variant_id) {
+        $stmt = $pdo->prepare("SELECT meta FROM product_variants WHERE id=?");
+        $stmt->execute([$variant_id]);
+    } else {
+        $stmt = $pdo->prepare("SELECT meta FROM products WHERE id=?");
+        $stmt->execute([$product_id]);
+    }
+
+    $meta = json_decode($stmt->fetchColumn(), true) ?: [];
+
+    return $meta['discount'] ?? [];
+}
+
 $gst_type = 'CGST_SGST';
 
 $taxable_total = 0;
@@ -141,7 +153,9 @@ $grand_total = 0;
 
 foreach ($input['items'] as &$item) {
 
-    // GST rate
+    /* -------------------------------
+       GST RATE
+    -------------------------------- */
     if ($item['variant_id']) {
         $stmt = $pdo->prepare("SELECT gst_rate FROM product_variants WHERE id=?");
         $stmt->execute([$item['variant_id']]);
@@ -154,13 +168,38 @@ foreach ($input['items'] as &$item) {
     $rate = (float)$item['rate'];
     $qty  = (float)$item['quantity'];
 
-    // taxable
-    $taxable = round($rate * $qty, 2);
+    /* -------------------------------
+       🔥 AUTO PRODUCT / VARIANT DISCOUNT
+    -------------------------------- */
+    $discount = getItemDiscount(
+        $pdo,
+        $item['product_id'],
+        $item['variant_id']
+    );
 
-    // GST
+    $discount_amount = 0;
+
+    if (!empty($discount)) {
+        if ($discount['type'] === 'percentage') {
+            $discount_amount = ($rate * $discount['value']) / 100;
+        } elseif ($discount['type'] === 'flat') {
+            $discount_amount = $discount['value'];
+        }
+    }
+
+    $final_rate = max(0, round($rate - $discount_amount, 2));
+
+    /* -------------------------------
+       TAXABLE AFTER DISCOUNT
+    -------------------------------- */
+    $taxable = round($final_rate * $qty, 2);
+
+    /* -------------------------------
+       GST CALCULATION
+    -------------------------------- */
     $gst_total_item = round(($taxable * $gst_rate) / 100, 2);
-    $cgst = $sgst = $igst = 0;
 
+    $cgst = $sgst = $igst = 0;
     if ($gst_type === 'CGST_SGST') {
         $cgst = round($gst_total_item / 2, 2);
         $sgst = round($gst_total_item / 2, 2);
@@ -168,10 +207,15 @@ foreach ($input['items'] as &$item) {
         $igst = $gst_total_item;
     }
 
-    // final line amount → goes to sale_items.amount
     $line_total = round($taxable + $cgst + $sgst + $igst, 2);
 
-    // assign
+    /* -------------------------------
+       ASSIGN TO ITEM
+    -------------------------------- */
+    $item['original_rate']  = $rate;
+    $item['discount']       = $discount;
+    $item['discount_amount']= round($discount_amount,2);
+    $item['rate']           = $final_rate;
     $item['taxable_amount'] = $taxable;
     $item['gst_rate']       = $gst_rate;
     $item['cgst']           = $cgst;
@@ -179,7 +223,9 @@ foreach ($input['items'] as &$item) {
     $item['igst']           = $igst;
     $item['amount']         = $line_total;
 
-    // totals
+    /* -------------------------------
+       TOTALS
+    -------------------------------- */
     $taxable_total += $taxable;
     $cgst_total    += $cgst;
     $sgst_total    += $sgst;
@@ -187,6 +233,7 @@ foreach ($input['items'] as &$item) {
     $grand_total   += $line_total;
 }
 unset($item);
+
 
 /* =================================================
    STOCK CHECK
@@ -245,43 +292,96 @@ try {
         ])
     );
 
-    /* ---------- LOYALTY ---------- */
-    if (strtolower($vertical) !== "restaurant") {
-        $pts = $final_total / 100;
-        if ($pts > 0) {
-            $stmt = $pdo->prepare("
-                INSERT INTO loyalty_points
-                (org_id,outlet_id,customer_id,sale_id,points_earned,points_redeemed)
-                VALUES (?,?,?,?,?,0)
-            ");
-            $stmt->execute([
-                $authUser['org_id'],
-                $outlet_id,
-                $customer_id,
-                $result['sale_id'],
-                $pts
-            ]);
-        }
+   /* ---------- LOYALTY ---------- */
+$loyalty_earned = 0;
+
+if (strtolower($vertical) !== "restaurant") {
+    $pts = $final_total / 100;
+    if ($pts > 0) {
+        $loyalty_earned = round($pts, 2);
+
+        $stmt = $pdo->prepare("
+            INSERT INTO loyalty_points
+            (org_id,outlet_id,customer_id,sale_id,points_earned,points_redeemed)
+            VALUES (?,?,?,?,?,0)
+        ");
+        $stmt->execute([
+            $authUser['org_id'],
+            $outlet_id,
+            $customer_id,
+            $result['sale_id'],
+            $loyalty_earned
+        ]);
     }
+}
 
     $pdo->commit();
-      /* =================================================
-       🔥 ENHANCED RESPONSE (ONLY CHANGE)
-    ================================================= */
-    sendSuccess([
-        "sale_id"   => $result['sale_id'],
-        "outlet"    => $outlet,
-        "customer_id" => $customer_id,
-        "items"     => $input['items'],
-        "summary"   => [
-            "taxable_amount" => round($taxable_total,2),
-            "cgst"           => round($cgst_total,2),
-            "sgst"           => round($sgst_total,2),
-            "igst"           => round($igst_total,2),
-            "round_off"      => round($round_off,2),
-            "grand_total"    => $final_total
-        ]
-    ], "Sale created successfully");
+    /* =================================================
+   🔥 ENHANCED RESPONSE (UPDATED)
+================================================= */
+
+// calculate total discount from items
+$total_discount = 0;
+foreach ($input['items'] as $it) {
+    $total_discount += (float)($it['discount_amount'] ?? 0) * (float)$it['quantity'];
+}
+
+sendSuccess([
+    "sale_id"     => $result['sale_id'],
+    "outlet"      => $outlet,
+    "customer_id" => $customer_id,
+
+    /* -----------------------------
+       ITEM DETAILS (FULL SNAPSHOT)
+    ----------------------------- */
+    "items" => array_map(function ($item) {
+        return [
+            "product_id"       => $item['product_id'],
+            "variant_id"       => $item['variant_id'] ?? null,
+            "quantity"         => $item['quantity'],
+
+            "original_rate"    => $item['original_rate'],
+            "discount"         => $item['discount'] ?? null,
+            "discount_amount"  => $item['discount_amount'] ?? 0,
+
+            "final_rate"       => $item['rate'],
+            "taxable_amount"   => $item['taxable_amount'],
+
+            "gst_rate"         => $item['gst_rate'],
+            "cgst"             => $item['cgst'],
+            "sgst"             => $item['sgst'],
+            "igst"             => $item['igst'],
+
+            "line_total"       => $item['amount']
+        ];
+    }, $input['items']),
+
+    /* -----------------------------
+       BILL SUMMARY
+    ----------------------------- */
+    "summary" => [
+        "taxable_amount" => round($taxable_total, 2),
+
+        "discount_total" => round($total_discount, 2),
+
+        "cgst"           => round($cgst_total, 2),
+        "sgst"           => round($sgst_total, 2),
+        "igst"           => round($igst_total, 2),
+
+        "round_off"      => round($round_off, 2),
+        "grand_total"    => $final_total
+    ],
+ 
+     /* -----------------------------
+       LOYALTY DETAILS
+    ----------------------------- */
+    "loyalty" => [
+        "points_earned" => $loyalty_earned,
+        "basis"         => "1 point per ₹100",
+        "sale_id"       => $result['sale_id']
+    ]
+], "Sale created successfully");
+
 
 } catch (Exception $e) {
     $pdo->rollBack();

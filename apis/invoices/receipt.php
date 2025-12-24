@@ -57,7 +57,26 @@ $stmt->execute([$sale_id,$authUser['org_id'],$outlet_id]);
 $sale = $stmt->fetch(PDO::FETCH_ASSOC);
 if(!$sale) sendError("Sale not found",404);
 
-/* ================= ITEMS (GST ALREADY CALCULATED) ================= */
+/* ================= FETCH PAYMENT (SOURCE OF TRUTH) ================= */
+$stmt = $pdo->prepare("
+    SELECT *
+    FROM payments
+    WHERE sale_id=? AND org_id=?
+    ORDER BY id DESC
+    LIMIT 1
+");
+$stmt->execute([$sale_id, $authUser['org_id']]);
+$payment = $stmt->fetch(PDO::FETCH_ASSOC);
+if(!$payment) sendError("Payment not found for this sale",404);
+
+$paymentMeta = json_decode($payment['meta'], true) ?: [];
+
+$original_amount = (float)($paymentMeta['original_amount'] ?? $sale['total_amount']);
+$redeem_points   = (float)($paymentMeta['redeem_points'] ?? 0);
+$redeem_value    = (float)($paymentMeta['redeem_value'] ?? 0);
+$final_paid      = (float)$payment['amount'];
+
+/* ================= FETCH ITEMS ================= */
 $stmt = $pdo->prepare("
     SELECT 
         si.quantity,
@@ -75,41 +94,34 @@ $stmt = $pdo->prepare("
 $stmt->execute([$sale_id]);
 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-/* ================= TOTALS (SUM ONLY) ================= */
-$sub_total = 0;
+/* ================= GST TOTALS ================= */
 $taxable_total = 0;
 $cgst_total = 0;
 $sgst_total = 0;
 $igst_total = 0;
 
 foreach ($items as $i) {
-    $sub_total      += (float)$i['amount'];
-    $taxable_total  += (float)$i['taxable_amount'];
-    $cgst_total     += (float)$i['cgst'];
-    $sgst_total     += (float)$i['sgst'];
-    $igst_total     += (float)$i['igst'];
+    $taxable_total += (float)$i['taxable_amount'];
+    $cgst_total    += (float)$i['cgst'];
+    $sgst_total    += (float)$i['sgst'];
+    $igst_total    += (float)$i['igst'];
 }
 
-$discount  = (float)($sale['discount'] ?? 0);
-$gross     = $sub_total - $discount;
-$round_off = round($gross) - $gross;
-$net_total = round($gross);
-
 /* ================= BARCODE ================= */
-$invoiceCode = "INV".$sale['id'];
+$invoiceCode = "INV".str_pad($sale_id, 6, '0', STR_PAD_LEFT);
 $barcode = barcodeDataUri($invoiceCode, 60, 2);
 
-/* ================= RECEIPT HTML (THERMAL STYLE) ================= */
+/* ================= THERMAL RECEIPT HTML ================= */
 $html = "
 <html>
 <head>
 <style>
 body { font-family: DejaVu Sans; font-size:11px; text-align:center; }
-.line { border-top:1px dashed #000; margin:4px 0; }
+.line { border-top:1px dashed #000; margin:6px 0; }
 table { width:100%; border-collapse:collapse; }
 td { padding:2px; }
-.right { text-align:right; }
 .left { text-align:left; }
+.right { text-align:right; }
 </style>
 </head>
 <body>
@@ -117,7 +129,7 @@ td { padding:2px; }
 <h3>{$sale['org_name']}</h3>
 <div>{$sale['outlet_name']}</div>
 <div>GSTIN: {$sale['gstin']}</div>
-<div>Bill No: {$invoiceCode}</div>
+<div>Receipt: {$invoiceCode}</div>
 <div>Date: {$sale['created_at']}</div>
 
 <img src='{$barcode}'><br>
@@ -143,20 +155,36 @@ foreach ($items as $i) {
 }
 
 $html .= "
-<tr><td colspan='3' class='right'>Sub Total</td><td class='right'>".number_format($sub_total,2)."</td></tr>
-<tr><td colspan='3' class='right'>Discount</td><td class='right'>".number_format($discount,2)."</td></tr>
-
-<tr><td colspan='3' class='right'>CGST</td><td class='right'>".number_format($cgst_total,2)."</td></tr>
-<tr><td colspan='3' class='right'>SGST</td><td class='right'>".number_format($sgst_total,2)."</td></tr>
-<tr><td colspan='3' class='right'>IGST</td><td class='right'>".number_format($igst_total,2)."</td></tr>
-
-<tr><td colspan='3' class='right'>Round Off</td><td class='right'>".number_format($round_off,2)."</td></tr>
-<tr><td colspan='3' class='right'><b>NET AMOUNT</b></td>
-<td class='right'><b>".number_format($net_total,2)."</b></td></tr>
 </table>
 
 <div class='line'></div>
-<p>Inclusive of GST • Thank You Visit Again</p>
+
+<table>
+<tr><td class='left'>Taxable</td><td class='right'>".number_format($taxable_total,2)."</td></tr>
+<tr><td class='left'>CGST</td><td class='right'>".number_format($cgst_total,2)."</td></tr>
+<tr><td class='left'>SGST</td><td class='right'>".number_format($sgst_total,2)."</td></tr>";
+
+if ($igst_total > 0) {
+    $html .= "<tr><td class='left'>IGST</td><td class='right'>".number_format($igst_total,2)."</td></tr>";
+}
+
+$html .= "
+<tr><td class='left'>Bill Amount</td><td class='right'>".number_format($original_amount,2)."</td></tr>";
+
+if ($redeem_value > 0) {
+    $html .= "
+    <tr><td class='left'>Loyalty Redeem</td>
+    <td class='right'>-".number_format($redeem_value,2)."</td></tr>";
+}
+
+$html .= "
+<tr><td class='left'><b>NET PAID</b></td>
+<td class='right'><b>".number_format($final_paid,2)."</b></td></tr>
+</table>
+
+<div class='line'></div>
+<p>Paid via {$payment['payment_mode']}<br>
+Thank You • Visit Again</p>
 
 </body>
 </html>";

@@ -39,11 +39,11 @@ foreach (['product_id','outlet_id'] as $f) {
 $product_id = (int)$input['product_id'];
 $outlet_id  = (int)$input['outlet_id'];
 
-$name            = array_key_exists('name', $input) ? trim($input['name']) : null;
-$price           = array_key_exists('price', $input) ? (float)$input['price'] : null;
-$category_id     = array_key_exists('category_id', $input) ? (int)$input['category_id'] : null;
-$sub_category_id = array_key_exists('sub_category_id', $input) ? (int)$input['sub_category_id'] : null;
-$gst_rate        = array_key_exists('gst_rate', $input) ? (float)$input['gst_rate'] : null;
+$name            = $input['name']            ?? null;
+$price           = isset($input['price']) ? (float)$input['price'] : null;
+$category_id     = $input['category_id']     ?? null;
+$sub_category_id = $input['sub_category_id'] ?? null;
+$gst_rate        = isset($input['gst_rate']) ? (float)$input['gst_rate'] : null;
 
 /* -------------------------------------------------
    BASIC VALIDATION
@@ -54,13 +54,6 @@ if ($gst_rate !== null && ($gst_rate < 0 || $gst_rate > 100)) {
 }
 
 /* -------------------------------------------------
-   VALIDATE OUTLET
-------------------------------------------------- */
-$stmt = $pdo->prepare("SELECT id FROM outlets WHERE id=? AND org_id=?");
-$stmt->execute([$outlet_id, $authUser['org_id']]);
-if (!$stmt->fetch()) sendError("Invalid outlet", 403);
-
-/* -------------------------------------------------
    VALIDATE PRODUCT
 ------------------------------------------------- */
 $stmt = $pdo->prepare("
@@ -69,52 +62,74 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$product_id, $outlet_id, $authUser['org_id']]);
 $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
 if (!$existing) sendError("Product not found", 404);
 
-/* -------------------------------------------------
-   VALIDATE CATEGORY (OPTIONAL)
-------------------------------------------------- */
-if ($category_id !== null) {
-    $stmt = $pdo->prepare("
-        SELECT id,name FROM categories
-        WHERE id=? AND org_id=? AND status=1
-    ");
-    $stmt->execute([$category_id, $authUser['org_id']]);
-    if (!$stmt->fetch()) sendError("Invalid category_id", 422);
+$productMeta = json_decode($existing['meta'], true) ?: [];
+
+/* -----------------------------
+   AUTO META FIELDS (PRODUCT)
+----------------------------- */
+$productMetaFields = [
+    'brand',
+    'size',
+    'dealer',
+    'sku',
+    'description',
+    'purchase_price'
+];
+
+foreach ($productMetaFields as $field) {
+    if (isset($input[$field]) && $input[$field] !== '') {
+        $productMeta[$field] = $input[$field];
+    }
+}
+
+/* -----------------------------
+   DISCOUNT
+----------------------------- */
+if (!empty($input['discount_type']) && !empty($input['discount_value'])) {
+    $productMeta['discount'] = [
+        'type'  => $input['discount_type'],
+        'value' => (float)$input['discount_value']
+    ];
+}
+
+/* -----------------------------
+   RAW META MERGE (OPTIONAL)
+----------------------------- */
+if (!empty($input['meta']) && is_array($input['meta'])) {
+    $productMeta = array_merge($productMeta, $input['meta']);
+}
+
+/* PRODUCT BARCODE */
+if (!empty($input['barcode'])) {
+    $productMeta['barcode'] = preg_replace('/\s+/', '', $input['barcode']);
 }
 
 /* -------------------------------------------------
-   VALIDATE SUB CATEGORY (OPTIONAL)
+   DUPLICATE NAME CHECK
 ------------------------------------------------- */
-if ($sub_category_id !== null) {
+if (!empty($name)) {
     $stmt = $pdo->prepare("
-        SELECT id FROM sub_categories
-        WHERE id=? AND category_id=? AND status=1
+        SELECT id FROM products
+        WHERE org_id=? AND outlet_id=? AND LOWER(name)=LOWER(?) AND id!=?
+        LIMIT 1
     ");
     $stmt->execute([
-        $sub_category_id,
-        $category_id ?? $existing['category_id']
+        $authUser['org_id'],
+        $outlet_id,
+        $name,
+        $product_id
     ]);
-    if (!$stmt->fetch()) sendError("Invalid sub_category_id", 422);
+
+    if ($stmt->fetchColumn()) {
+        sendError("Product already exists with the same name in this outlet", 409);
+    }
 }
 
 /* -------------------------------------------------
-   META (ARRAY ONLY)
-------------------------------------------------- */
-$meta = json_decode($existing['meta'], true) ?: [];
-if (isset($input['meta']) && is_array($input['meta'])) {
-    $meta = array_merge($meta, $input['meta']);
-}
-
-/* -------------------------------------------------
-   BARCODE (OPTIONAL UPDATE)
-------------------------------------------------- */
-if (!empty($input['barcode'])) {
-    $meta['barcode'] = preg_replace('/\s+/', '', $input['barcode']);
-}
-
-/* -------------------------------------------------
-   FINAL VALUES
+   FINAL PRODUCT VALUES
 ------------------------------------------------- */
 $final = [
     'name'            => $name            ?? $existing['name'],
@@ -122,7 +137,7 @@ $final = [
     'gst_rate'        => $gst_rate        ?? $existing['gst_rate'],
     'category_id'     => $category_id     ?? $existing['category_id'],
     'sub_category_id' => $sub_category_id ?? $existing['sub_category_id'],
-    'meta'            => json_encode($meta, JSON_UNESCAPED_UNICODE)
+    'meta'            => json_encode($productMeta, JSON_UNESCAPED_UNICODE)
 ];
 
 try {
@@ -131,17 +146,11 @@ try {
     /* -------------------------------------------------
        UPDATE PRODUCT
     ------------------------------------------------- */
-    $stmt = $pdo->prepare("
+    $pdo->prepare("
         UPDATE products SET
-            name=?,
-            price=?,
-            gst_rate=?,
-            category_id=?,
-            sub_category_id=?,
-            meta=?
+            name=?, price=?, gst_rate=?, category_id=?, sub_category_id=?, meta=?
         WHERE id=? AND outlet_id=? AND org_id=?
-    ");
-    $stmt->execute([
+    ")->execute([
         $final['name'],
         $final['price'],
         $final['gst_rate'],
@@ -154,16 +163,22 @@ try {
     ]);
 
     /* -------------------------------------------------
-       VARIANTS (REPLACE MODE)
+       VARIANTS (SAFE REPLACE MODE)
     ------------------------------------------------- */
+    $variantResponses = [];
+
     if (isset($input['variants']) && is_array($input['variants'])) {
 
+        // DELETE INVENTORY FIRST
         $pdo->prepare("
-            DELETE FROM product_variants WHERE product_id=?
+            DELETE FROM inventory
+            WHERE product_id=? AND variant_id IS NOT NULL
         ")->execute([$product_id]);
 
+        // DELETE VARIANTS
         $pdo->prepare("
-            DELETE FROM inventory WHERE product_id=? AND variant_id IS NOT NULL
+            DELETE FROM product_variants
+            WHERE product_id=?
         ")->execute([$product_id]);
 
         $variantModel = new ProductVariant($pdo);
@@ -171,31 +186,129 @@ try {
         foreach ($input['variants'] as $v) {
             if (empty($v['name']) || empty($v['price'])) continue;
 
+           $variantMeta = [];
+
+/* -----------------------------
+   AUTO META FIELDS (VARIANT)
+----------------------------- */
+$variantMetaFields = [
+    'brand',
+    'size',
+    'dealer',
+    'sku',
+    'description',
+    'purchase_price'
+];
+
+foreach ($variantMetaFields as $field) {
+    if (isset($v[$field]) && $v[$field] !== '') {
+        $variantMeta[$field] = $v[$field];
+    }
+}
+
+/* -----------------------------
+   DISCOUNT
+----------------------------- */
+if (!empty($v['discount_type']) && !empty($v['discount_value'])) {
+    $variantMeta['discount'] = [
+        'type'  => $v['discount_type'],
+        'value' => (float)$v['discount_value']
+    ];
+}
+
+/* -----------------------------
+   RAW META MERGE (OPTIONAL)
+----------------------------- */
+if (!empty($v['meta']) && is_array($v['meta'])) {
+    $variantMeta = array_merge($variantMeta, $v['meta']);
+}
+
             $variant_id = $variantModel->create([
                 'product_id' => $product_id,
                 'name'       => trim($v['name']),
                 'price'      => (float)$v['price'],
-                'gst_rate'   => (float)($v['gst_rate'] ?? 0)
+                'gst_rate'   => (float)($v['gst_rate'] ?? 0),
+                'meta'       => []
             ]);
 
+            /* VARIANT BARCODE */
+            $variant_barcode = !empty($v['barcode'])
+                ? preg_replace('/\s+/', '', $v['barcode'])
+                : generate_barcode($authUser['org_id'], $product_id, $variant_id);
+
+            $variantMeta['barcode'] = $variant_barcode;
+
             $pdo->prepare("
-                INSERT INTO inventory (org_id,outlet_id,product_id,variant_id,quantity)
-                VALUES (?,?,?,?,?)
+                UPDATE product_variants SET meta=?
+                WHERE id=?
             ")->execute([
-                $authUser['org_id'],
-                $outlet_id,
-                $product_id,
-                $variant_id,
-                (int)($v['quantity'] ?? 0)
+                json_encode($variantMeta, JSON_UNESCAPED_UNICODE),
+                $variant_id
             ]);
+
+            $variantResponses[] = [
+                'variant_id' => $variant_id,
+                'name'       => trim($v['name']),
+                'barcode'    => $variant_barcode
+            ];
+
+            $pdo->prepare("
+    INSERT INTO inventory
+    (org_id,outlet_id,product_id,variant_id,quantity,low_stock_limit)
+    VALUES (?,?,?,?,?,?)
+")->execute([
+    $authUser['org_id'],
+    $outlet_id,
+    $product_id,
+    $variant_id,
+    (int)($v['quantity'] ?? 0),
+    isset($v['low_stock_limit']) ? (int)$v['low_stock_limit'] : null
+]);
+
         }
     }
+
+
+    /* -------------------------------------------------
+   UPDATE PRODUCT INVENTORY (LOW STOCK)
+------------------------------------------------- */
+if (array_key_exists('low_stock_limit', $input) || array_key_exists('quantity', $input)) {
+
+    // check inventory row exists
+    $stmt = $pdo->prepare("
+        SELECT id FROM inventory
+        WHERE org_id=? AND outlet_id=? AND product_id=? AND variant_id IS NULL
+        LIMIT 1
+    ");
+    $stmt->execute([
+        $authUser['org_id'],
+        $outlet_id,
+        $product_id
+    ]);
+    $invId = $stmt->fetchColumn();
+
+    if ($invId) {
+        $pdo->prepare("
+            UPDATE inventory
+            SET
+                quantity = COALESCE(?, quantity),
+                low_stock_limit = COALESCE(?, low_stock_limit)
+            WHERE id=?
+        ")->execute([
+            $input['quantity'] ?? null,
+            isset($input['low_stock_limit']) ? (int)$input['low_stock_limit'] : null,
+            $invId
+        ]);
+    }
+}
+
 
     $pdo->commit();
 
     sendSuccess([
         "product_id" => $product_id,
-        "barcode"    => $meta['barcode'] ?? null
+        "barcode"    => $productMeta['barcode'] ?? null,
+        "variants"   => $variantResponses
     ], "Product updated successfully");
 
 } catch (Exception $e) {

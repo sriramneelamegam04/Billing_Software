@@ -69,11 +69,10 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$product_id]);
 $total = (int)$stmt->fetchColumn();
-
 $total_pages = $limit > 0 ? ceil($total / $limit) : 0;
 
 /* -------------------------------------------------
-   FETCH VARIANTS + INVENTORY
+   FETCH VARIANTS + INVENTORY + META
 ------------------------------------------------- */
 $stmt = $pdo->prepare("
     SELECT
@@ -81,6 +80,7 @@ $stmt = $pdo->prepare("
         v.name,
         v.price,
         v.gst_rate,
+        v.meta,
         COALESCE(i.quantity, 0) AS quantity
     FROM product_variants v
     LEFT JOIN inventory i
@@ -89,7 +89,7 @@ $stmt = $pdo->prepare("
        AND i.org_id = ?
        AND i.outlet_id = ?
     WHERE v.product_id = ?
-    ORDER BY v.id ASC
+    ORDER BY v.id DESC
     LIMIT ? OFFSET ?
 ");
 
@@ -103,21 +103,45 @@ $stmt->execute();
 $variants = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* -------------------------------------------------
+   FORMAT RESPONSE
+------------------------------------------------- */
+$responseVariants = [];
+
+foreach ($variants as $v) {
+
+    $meta = json_decode($v['meta'], true) ?: [];
+    $barcode = $meta['barcode'] ?? null;
+
+    $base_price = (float)$v['price'];
+    $gst_rate   = (float)$v['gst_rate'];
+
+    $gst_amount = round(($base_price * $gst_rate) / 100, 2);
+    $final      = round($base_price + $gst_amount, 2);
+
+    $responseVariants[] = [
+        "variant_id" => (int)$v['variant_id'],
+        "name"       => $v['name'],
+        "price"      => $base_price,
+        "gst_rate"   => $gst_rate,
+        "quantity"   => (int)$v['quantity'],
+
+        // 🔥 NEW FIELDS
+        "barcode"    => $barcode,
+        "price_tag" => [
+            "final_price" => "₹" . number_format($final, 0),
+            "barcode"     => $barcode
+        ]
+    ];
+}
+
+/* -------------------------------------------------
    RESPONSE
 ------------------------------------------------- */
 sendSuccess([
-    "product_id"   => $product_id,
-    "page"         => $page,
-    "limit"        => $limit,
-    "total"        => $total,
-    "total_pages"  => $total_pages,
-    "variants"     => array_map(function ($v) {
-        return [
-            "variant_id" => (int)$v['variant_id'],
-            "name"       => $v['name'],
-            "price"      => (float)$v['price'],
-            "gst_rate"   => (float)$v['gst_rate'],
-            "quantity"   => (int)$v['quantity']
-        ];
-    }, $variants)
+    "product_id"  => $product_id,
+    "page"        => $page,
+    "limit"       => $limit,
+    "total"       => $total,
+    "total_pages" => $total_pages,
+    "variants"    => $responseVariants
 ], "Variants fetched successfully");

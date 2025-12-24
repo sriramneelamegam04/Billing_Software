@@ -49,6 +49,22 @@ $sale = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$sale) sendError("Sale not found", 404);
 
 /* =========================
+   FETCH LATEST PAYMENT (SOURCE OF TRUTH)
+========================= */
+$stmt = $pdo->prepare("
+    SELECT *
+    FROM payments
+    WHERE sale_id=? AND org_id=?
+    ORDER BY id DESC
+    LIMIT 1
+");
+$stmt->execute([$sale_id, $authUser['org_id']]);
+$payment = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$payment) sendError("Payment not found for this sale", 404);
+
+$paymentMeta = json_decode($payment['meta'], true) ?: [];
+
+/* =========================
    CUSTOMER FALLBACK
 ========================= */
 $customerName  = trim($sale['customer_name'] ?? '') ?: 'Walk-in Customer';
@@ -76,7 +92,7 @@ $pdo->prepare("
 ")->execute([$num['id']]);
 
 /* =========================
-   FETCH ITEMS (SOURCE OF TRUTH)
+   FETCH ITEMS
 ========================= */
 $stmt = $pdo->prepare("
     SELECT 
@@ -96,24 +112,23 @@ $stmt->execute([$sale_id]);
 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* =========================
-   TOTALS (ITEM-WISE ONLY)
+   TOTALS
 ========================= */
-$subTotal       = 0;
-$taxableTotal   = 0;
-$cgstTotal      = 0;
-$sgstTotal      = 0;
-$igstTotal      = 0;
-
+$taxableTotal = $cgstTotal = $sgstTotal = $igstTotal = 0;
 foreach ($items as $i) {
-    $subTotal     += (float)$i['amount'];
     $taxableTotal += (float)$i['taxable_amount'];
     $cgstTotal    += (float)$i['cgst'];
     $sgstTotal    += (float)$i['sgst'];
     $igstTotal    += (float)$i['igst'];
 }
 
-$roundOff  = round($subTotal) - $subTotal;
-$netAmount = round($subTotal);
+/* =========================
+   PAYMENT VALUES
+========================= */
+$originalAmount = (float)($paymentMeta['original_amount'] ?? $sale['total_amount']);
+$redeemPoints   = (float)($paymentMeta['redeem_points'] ?? 0);
+$redeemValue    = (float)($paymentMeta['redeem_value'] ?? 0);
+$netAmount      = (float)$payment['amount'];
 
 /* =========================
    BARCODE
@@ -121,7 +136,7 @@ $netAmount = round($subTotal);
 $barcode = barcodeDataUri($invoiceCode, 60, 2);
 
 /* =========================
-   HTML (INVOICE)
+   HTML
 ========================= */
 $html = "
 <html>
@@ -190,9 +205,14 @@ if ($igstTotal > 0) {
     $html .= "<tr><td colspan='3' class='right'>IGST</td><td class='right'>".number_format($igstTotal,2)."</td></tr>";
 }
 
+if ($redeemValue > 0) {
+    $html .= "<tr><td colspan='3' class='right'>Loyalty Redeemed ({$redeemPoints} pts)</td>
+              <td class='right'>-".number_format($redeemValue,2)."</td></tr>";
+}
+
 $html .= "
-<tr><td colspan='3' class='right'>Round Off</td><td class='right'>".number_format($roundOff,2)."</td></tr>
-<tr class='total'><td colspan='3' class='right'>Net Amount</td><td class='right'>".number_format($netAmount,2)."</td></tr>
+<tr class='total'><td colspan='3' class='right'>Net Amount Paid</td>
+<td class='right'>".number_format($netAmount,2)."</td></tr>
 </table>
 
 <p class='small center'>Inclusive of GST • Thank You Visit Again</p>
@@ -201,7 +221,7 @@ $html .= "
 </html>";
 
 /* =========================
-   PDF OUTPUT
+   PDF
 ========================= */
 $pdf = new Dompdf();
 $pdf->loadHtml($html);

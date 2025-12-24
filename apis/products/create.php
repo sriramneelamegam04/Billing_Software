@@ -44,34 +44,27 @@ $sub_category_id = (int)$input['sub_category_id'];
 $gst_rate        = (float)($input['gst_rate'] ?? 0);
 $quantity        = (int)($input['quantity'] ?? 0);
 
+$purchase_price  = (float)($input['purchase_price'] ?? 0);
+$discount_type   = $input['discount_type'] ?? null;
+$discount_value  = (float)($input['discount_value'] ?? 0);
+$low_stock_limit = isset($input['low_stock_limit']) ? (int)$input['low_stock_limit'] : null;
+
 if ($price <= 0) sendError("Invalid price", 422);
 if ($gst_rate < 0 || $gst_rate > 100) sendError("Invalid gst_rate", 422);
 
 /* -------------------------------------------------
-   VALIDATE OUTLET
+   VALIDATIONS
 ------------------------------------------------- */
 $stmt = $pdo->prepare("SELECT id FROM outlets WHERE id=? AND org_id=?");
 $stmt->execute([$outlet_id, $authUser['org_id']]);
 if (!$stmt->fetch()) sendError("Invalid outlet", 403);
 
-/* -------------------------------------------------
-   VALIDATE CATEGORY
-------------------------------------------------- */
-$stmt = $pdo->prepare("
-    SELECT id, name FROM categories
-    WHERE id=? AND org_id=? AND status=1
-");
+$stmt = $pdo->prepare("SELECT id, name FROM categories WHERE id=? AND org_id=? AND status=1");
 $stmt->execute([$category_id, $authUser['org_id']]);
 $category = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$category) sendError("Invalid category_id", 422);
 
-/* -------------------------------------------------
-   VALIDATE SUB CATEGORY
-------------------------------------------------- */
-$stmt = $pdo->prepare("
-    SELECT id, name FROM sub_categories
-    WHERE id=? AND category_id=? AND status=1
-");
+$stmt = $pdo->prepare("SELECT id, name FROM sub_categories WHERE id=? AND category_id=? AND status=1");
 $stmt->execute([$sub_category_id, $category_id]);
 $subCategory = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$subCategory) sendError("Invalid sub_category_id", 422);
@@ -79,17 +72,49 @@ if (!$subCategory) sendError("Invalid sub_category_id", 422);
 try {
     $pdo->beginTransaction();
 
-    /* -------------------------------------------------
-       META AS ARRAY (IMPORTANT FIX)
-    ------------------------------------------------- */
     $meta = [];
-    if (isset($input['meta']) && is_array($input['meta'])) {
-        $meta = $input['meta'];
+
+/* -----------------------------
+   AUTO META FIELDS (PRODUCT)
+----------------------------- */
+$metaFields = [
+    'purchase_price',
+    'brand',
+    'size',
+    'dealer',
+    'sku',
+    'description'
+];
+
+foreach ($metaFields as $field) {
+    if (isset($input[$field]) && $input[$field] !== '') {
+        $meta[$field] = $input[$field];
+    }
+}
+
+/* -----------------------------
+   DISCOUNT
+----------------------------- */
+if (!empty($input['discount_type']) && !empty($input['discount_value'])) {
+    $meta['discount'] = [
+        'type'  => $input['discount_type'],
+        'value' => (float)$input['discount_value']
+    ];
+}
+
+
+    /* DUPLICATE CHECK */
+    $stmt = $pdo->prepare("
+        SELECT id FROM products
+        WHERE org_id=? AND outlet_id=? AND LOWER(name)=LOWER(?)
+        LIMIT 1
+    ");
+    $stmt->execute([$authUser['org_id'], $outlet_id, $name]);
+    if ($stmt->fetchColumn()) {
+        sendError("Product already exists with the same name in this outlet", 409);
     }
 
-    /* -------------------------------------------------
-       CREATE PRODUCT (WITHOUT BARCODE FIRST)
-    ------------------------------------------------- */
+    /* CREATE PRODUCT */
     $productModel = new Product($pdo);
     $product_id = $productModel->create([
         'name'            => $name,
@@ -99,62 +124,109 @@ try {
         'gst_rate'        => $gst_rate,
         'category_id'     => $category_id,
         'sub_category_id' => $sub_category_id,
-        'meta'            => $meta   // ✅ ARRAY ONLY
+        'meta'            => $meta
     ]);
 
-    /* -------------------------------------------------
-       BARCODE GENERATE + STORE IN META
-    ------------------------------------------------- */
-    $barcode = !empty($input['barcode'])
+    /* PRODUCT BARCODE */
+    $product_barcode = !empty($input['barcode'])
         ? preg_replace('/\s+/', '', $input['barcode'])
         : generate_barcode($authUser['org_id'], $product_id);
 
-    $meta['barcode'] = $barcode;
+    $meta['barcode'] = $product_barcode;
+    $pdo->prepare("UPDATE products SET meta=? WHERE id=?")
+        ->execute([json_encode($meta), $product_id]);
 
-    $stmt = $pdo->prepare("UPDATE products SET meta=? WHERE id=?");
-    $stmt->execute([
-        json_encode($meta, JSON_UNESCAPED_UNICODE),
-        $product_id
-    ]);
-
-    /* -------------------------------------------------
-       INVENTORY (PRODUCT LEVEL)
-    ------------------------------------------------- */
+    /* INVENTORY PRODUCT */
     $pdo->prepare("
-        INSERT INTO inventory (org_id,outlet_id,product_id,variant_id,quantity)
-        VALUES (?,?,?,?,?)
+        INSERT INTO inventory (org_id,outlet_id,product_id,variant_id,quantity,low_stock_limit)
+        VALUES (?,?,?,?,?,?)
     ")->execute([
         $authUser['org_id'],
         $outlet_id,
         $product_id,
         null,
-        $quantity
+        $quantity,
+        $low_stock_limit
     ]);
 
-    /* -------------------------------------------------
-       VARIANTS + INVENTORY
-    ------------------------------------------------- */
+    /* VARIANTS */
     $variantModel = new ProductVariant($pdo);
+    $variantResponses = [];
+
     if (!empty($input['variants']) && is_array($input['variants'])) {
         foreach ($input['variants'] as $v) {
+
             if (empty($v['name']) || empty($v['price'])) continue;
+
+            $variant_meta = [];
+
+/* -----------------------------
+   AUTO META FIELDS (VARIANT)
+----------------------------- */
+$variantMetaFields = [
+    'purchase_price',
+    'brand',
+    'size',
+    'dealer',
+    'sku',
+    'description'
+];
+
+foreach ($variantMetaFields as $field) {
+    if (isset($v[$field]) && $v[$field] !== '') {
+        $variant_meta[$field] = $v[$field];
+    }
+}
+
+/* -----------------------------
+   DISCOUNT
+----------------------------- */
+if (!empty($v['discount_type']) && !empty($v['discount_value'])) {
+    $variant_meta['discount'] = [
+        'type'  => $v['discount_type'],
+        'value' => (float)$v['discount_value']
+    ];
+}
+
 
             $variant_id = $variantModel->create([
                 'product_id' => $product_id,
                 'name'       => trim($v['name']),
                 'price'      => (float)$v['price'],
-                'gst_rate'   => (float)($v['gst_rate'] ?? 0)
+                'gst_rate'   => (float)($v['gst_rate'] ?? 0),
+                'meta'       => []
             ]);
 
+            $variant_barcode = !empty($v['barcode'])
+                ? preg_replace('/\s+/', '', $v['barcode'])
+                : generate_barcode($authUser['org_id'], $product_id, $variant_id);
+
+            $variant_meta['barcode'] = $variant_barcode;
+
             $pdo->prepare("
-                INSERT INTO inventory (org_id,outlet_id,product_id,variant_id,quantity)
-                VALUES (?,?,?,?,?)
+                UPDATE product_variants SET meta=?
+                WHERE id=?
+            ")->execute([
+                json_encode($variant_meta),
+                $variant_id
+            ]);
+
+            $variantResponses[] = [
+                'variant_id' => $variant_id,
+                'name'       => trim($v['name']),
+                'barcode'    => $variant_barcode
+            ];
+
+            $pdo->prepare("
+                INSERT INTO inventory (org_id,outlet_id,product_id,variant_id,quantity,low_stock_limit)
+                VALUES (?,?,?,?,?,?)
             ")->execute([
                 $authUser['org_id'],
                 $outlet_id,
                 $product_id,
                 $variant_id,
-                (int)($v['quantity'] ?? 0)
+                (int)($v['quantity'] ?? 0),
+                isset($v['low_stock_limit']) ? (int)$v['low_stock_limit'] : null
             ]);
         }
     }
@@ -162,10 +234,11 @@ try {
     $pdo->commit();
 
     sendSuccess([
-        "product_id"   => $product_id,
-        "barcode"      => $barcode,
-        "category"     => $category['name'],
-        "sub_category" => $subCategory['name']
+        'product_id'   => $product_id,
+        'barcode'      => $product_barcode,
+        'variants'     => $variantResponses,
+        'category'     => $category['name'],
+        'sub_category' => $subCategory['name']
     ], "Product created successfully");
 
 } catch (Exception $e) {

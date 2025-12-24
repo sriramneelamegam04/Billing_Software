@@ -11,11 +11,9 @@ class Product {
 
     /* ============================================
        CREATE PRODUCT
-       (CATEGORY + SUB CATEGORY ID BASED)
     ============================================ */
     public function create(array $data) {
 
-        // ✅ META ALWAYS ARRAY
         $meta = [];
         if (isset($data['meta']) && is_array($data['meta'])) {
             $meta = $data['meta'];
@@ -58,12 +56,11 @@ class Product {
     }
 
     /* ============================================
-       UPDATE PRODUCT
-       (SAFE META UPDATE)
+       SAFE META UPDATE (GENERIC)
+       👉 Used for barcode, purchase_price, discount
     ============================================ */
-    public function update($id, $org_id, $outlet_id, array $data) {
+    public function updateMeta($id, $org_id, $outlet_id, array $newMeta) {
 
-        // ✅ FETCH EXISTING META FIRST
         $stmt = $this->pdo->prepare("
             SELECT meta FROM products
             WHERE id=? AND org_id=? AND outlet_id=?
@@ -83,7 +80,57 @@ class Product {
             }
         }
 
-        // ✅ MERGE META IF PROVIDED
+        // MERGE
+        $meta = array_merge($meta, $newMeta);
+
+        $stmt = $this->pdo->prepare("
+            UPDATE products
+            SET meta = ?
+            WHERE id=? AND org_id=? AND outlet_id=?
+        ");
+
+        return $stmt->execute([
+            json_encode($meta, JSON_UNESCAPED_UNICODE),
+            $id,
+            $org_id,
+            $outlet_id
+        ]);
+    }
+
+    /* ============================================
+       SET / UPDATE PRODUCT BARCODE
+    ============================================ */
+    public function setBarcode($id, $org_id, $outlet_id, $barcode) {
+
+        return $this->updateMeta($id, $org_id, $outlet_id, [
+            'barcode' => $barcode
+        ]);
+    }
+
+    /* ============================================
+       UPDATE PRODUCT (FIELDS + META)
+    ============================================ */
+    public function update($id, $org_id, $outlet_id, array $data) {
+
+        $stmt = $this->pdo->prepare("
+            SELECT meta FROM products
+            WHERE id=? AND org_id=? AND outlet_id=?
+        ");
+        $stmt->execute([$id, $org_id, $outlet_id]);
+        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$existing) {
+            return false;
+        }
+
+        $meta = [];
+        if (!empty($existing['meta'])) {
+            $decoded = json_decode($existing['meta'], true);
+            if (is_array($decoded)) {
+                $meta = $decoded;
+            }
+        }
+
         if (isset($data['meta']) && is_array($data['meta'])) {
             $meta = array_merge($meta, $data['meta']);
         }
@@ -129,7 +176,7 @@ class Product {
     }
 
     /* ============================================
-       LIST PRODUCTS (ORG WISE)
+       LIST PRODUCTS
     ============================================ */
     public function list($org_id) {
 
@@ -143,7 +190,7 @@ class Product {
     }
 
     /* ============================================
-       GET SINGLE PRODUCT
+       FIND PRODUCT
     ============================================ */
     public function find($id, $org_id, $outlet_id) {
 
