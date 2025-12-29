@@ -5,72 +5,117 @@ require_once __DIR__ . '/../../bootstrap/db.php';
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: http://localhost:3000");
-header("Access-Control-Allow-Methods: POST, PATCH , GET, OPTIONS");
+header("Access-Control-Allow-Methods: GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
+if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
     http_response_code(200);
     exit;
 }
 
 // ✅ Method validation
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    http_response_code(405);
-    echo json_encode(["success" => false, "msg" => "Method Not Allowed. Use GET"]);
-    exit;
+    sendError("Method Not Allowed. Use GET", 405);
 }
 
-$authUser=getCurrentUser();
-if(!$authUser) sendError("Unauthorized",401);
+/* -------------------------------------------------
+   AUTH
+------------------------------------------------- */
+$authUser = getCurrentUser();
+if (!$authUser) sendError("Unauthorized", 401);
 
-$org_id=(int)($_REQUEST['org_id']??0);
-$outlet_id=$_REQUEST['outlet_id']??null;
-$date_from=$_REQUEST['date_from']??null;
-$date_to=$_REQUEST['date_to']??null;
+/* -------------------------------------------------
+   INPUT
+------------------------------------------------- */
+$org_id    = (int)($_REQUEST['org_id'] ?? 0);
+$outlet_id = $_REQUEST['outlet_id'] ?? null;
+$date_from = $_REQUEST['date_from'] ?? null;
+$date_to   = $_REQUEST['date_to'] ?? null;
+$today     = isset($_GET['today']) && (int)$_GET['today'] === 1;
 
-if($authUser['role']==='manager'){
-    $org_id=$authUser['org_id'];
-    if(!empty($outlet_id)&&$outlet_id!=$authUser['outlet_id']){
-        sendError("Forbidden: cannot access other outlets",403);
+/* -------------------------------------------------
+   ROLE BASED RESTRICTION
+------------------------------------------------- */
+if ($authUser['role'] === 'manager') {
+    $org_id = $authUser['org_id'];
+
+    if (!empty($outlet_id) && $outlet_id != $authUser['outlet_id']) {
+        sendError("Forbidden: cannot access other outlets", 403);
     }
-    $outlet_id=$authUser['outlet_id'];
+    $outlet_id = $authUser['outlet_id'];
 }
 
-try{
-    if($org_id<=0) sendError("org_id required",422);
+try {
+    if ($org_id <= 0) sendError("org_id required", 422);
 
-    $where="s.org_id=:org_id";
-    $params=[":org_id"=>$org_id];
-    if($outlet_id){$where.=" AND s.outlet_id=:outlet_id";$params[':outlet_id']=$outlet_id;}
-    if($date_from){$where.=" AND DATE(s.created_at)>=:df";$params[':df']=$date_from;}
-    if($date_to){$where.=" AND DATE(s.created_at)<=:dt";$params[':dt']=$date_to;}
+    /* -------------------------------------------------
+       WHERE CONDITIONS
+    ------------------------------------------------- */
+    $where  = "s.org_id = :org_id";
+    $params = [":org_id" => $org_id];
 
-    $stmt=$pdo->prepare("
-      SELECT DATE(s.created_at) sdate,
-             COUNT(DISTINCT s.id) bills,
-             COALESCE(SUM(si.quantity),0) items_qty,
-             COALESCE(SUM(si.amount),0) items_amount,
-             COALESCE(SUM(s.discount),0) discount,
-             COALESCE(SUM(p.amount),0) collections
-      FROM sales s
-      LEFT JOIN sale_items si ON si.sale_id=s.id
-      LEFT JOIN payments p ON p.sale_id=s.id
-      WHERE $where
-      GROUP BY DATE(s.created_at)
-      ORDER BY sdate
+    if ($outlet_id) {
+        $where .= " AND s.outlet_id = :outlet_id";
+        $params[':outlet_id'] = $outlet_id;
+    }
+
+    /* 🔥 TODAY FILTER (only if date range not provided) */
+    if ($today && !$date_from && !$date_to) {
+        $where .= " AND DATE(s.created_at) = CURDATE()";
+    }
+
+    if ($date_from) {
+        $where .= " AND DATE(s.created_at) >= :df";
+        $params[':df'] = $date_from;
+    }
+    if ($date_to) {
+        $where .= " AND DATE(s.created_at) <= :dt";
+        $params[':dt'] = $date_to;
+    }
+
+    /* -------------------------------------------------
+       DAILY SALES SUMMARY
+    ------------------------------------------------- */
+    $stmt = $pdo->prepare("
+        SELECT
+            DATE(s.created_at) AS sdate,
+            COUNT(DISTINCT s.id) AS bills,
+            COALESCE(SUM(si.quantity),0) AS items_qty,
+            COALESCE(SUM(si.amount),0) AS items_amount,
+            COALESCE(SUM(s.discount),0) AS discount,
+            COALESCE(SUM(p.amount),0) AS collections
+        FROM sales s
+        LEFT JOIN sale_items si ON si.sale_id = s.id
+        LEFT JOIN payments p ON p.sale_id = s.id
+        WHERE $where
+        GROUP BY DATE(s.created_at)
+        ORDER BY sdate
     ");
     $stmt->execute($params);
-    $rows=$stmt->fetchAll();
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $totals=[
-      'bills'=>array_sum(array_column($rows,'bills')),
-      'items_qty'=>array_sum(array_column($rows,'items_qty')),
-      'items_amount'=>array_sum(array_column($rows,'items_amount')),
-      'discount'=>array_sum(array_column($rows,'discount')),
-      'collections'=>array_sum(array_column($rows,'collections'))
+    /* -------------------------------------------------
+       TOTALS
+    ------------------------------------------------- */
+    $totals = [
+        'bills'        => array_sum(array_column($rows, 'bills')),
+        'items_qty'    => array_sum(array_column($rows, 'items_qty')),
+        'items_amount' => array_sum(array_column($rows, 'items_amount')),
+        'discount'     => array_sum(array_column($rows, 'discount')),
+        'collections'  => array_sum(array_column($rows, 'collections'))
     ];
-    $totals['net_sales']=$totals['items_amount']-$totals['discount'];
-    $totals['outstanding']=$totals['net_sales']-$totals['collections'];
 
-    sendSuccess("Sales summary",['rows'=>$rows,'totals'=>$totals]);
-}catch(Throwable $e){sendError($e->getMessage(),500);}
+    $totals['net_sales']  = $totals['items_amount'] - $totals['discount'];
+    $totals['outstanding'] = $totals['net_sales'] - $totals['collections'];
+
+    /* -------------------------------------------------
+       RESPONSE
+    ------------------------------------------------- */
+    sendSuccess("Sales summary", [
+        'rows'   => $rows,
+        'totals' => $totals
+    ]);
+
+} catch (Throwable $e) {
+    sendError($e->getMessage(), 500);
+}

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 23, 2025 at 12:44 PM
+-- Generation Time: Dec 29, 2025 at 05:19 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -242,20 +242,41 @@ INSERT INTO `inventory` (`id`, `org_id`, `outlet_id`, `product_id`, `variant_id`
 (124, 11, 17, 114, NULL, 104.00, 8, 1, '2025-12-22 20:15:17'),
 (125, 11, 17, 115, NULL, 83.00, 16, 1, '2025-12-23 15:23:47'),
 (126, 11, 17, 116, NULL, 38.00, 16, 1, '2025-12-22 20:15:17'),
-(127, 11, 17, 117, NULL, 116.00, 17, 1, '2025-12-22 20:15:17'),
+(127, 11, 17, 117, NULL, 116.00, 10, 1, '2025-12-24 13:13:50'),
 (128, 11, 17, 118, 63, 30.00, 3, 1, '2025-12-22 20:29:18'),
 (129, 11, 17, 119, 64, 25.00, 5, 1, '2025-12-22 20:29:18'),
 (130, 11, 17, 120, 65, 25.00, 5, 1, '2025-12-22 20:29:18'),
 (131, 11, 17, 121, 66, 55.00, 5, 1, '2025-12-22 20:29:18'),
-(132, 11, 17, 121, 67, 25.00, 5, 1, '2025-12-22 21:08:10'),
+(132, 11, 17, 121, 67, 25.00, 10, 1, '2025-12-24 12:35:45'),
 (133, 11, 17, 91, NULL, 19.00, NULL, 1, '2025-12-23 15:42:04'),
 (134, 11, 17, 122, NULL, 50.00, 10, 1, '2025-12-23 15:56:36'),
 (135, 11, 17, 122, 68, 20.00, 5, 1, '2025-12-23 15:56:36'),
 (136, 11, 17, 123, NULL, 50.00, NULL, 1, '2025-12-23 16:06:53'),
-(138, 11, 17, 123, 70, 30.00, NULL, 1, '2025-12-23 16:18:08'),
-(139, 11, 17, 124, 71, 20.00, 5, 1, '2025-12-23 16:44:28'),
 (140, 11, 17, 125, NULL, 30.00, 5, 1, '2025-12-23 16:44:28'),
-(141, 11, 17, 126, 72, 60.00, 10, 1, '2025-12-23 16:44:28');
+(141, 11, 17, 126, 72, 60.00, 10, 1, '2025-12-23 16:44:28'),
+(142, 11, 17, 123, 73, 30.00, NULL, 1, '2025-12-24 12:40:27'),
+(145, 11, 17, 124, 76, 30.00, 10, 1, '2025-12-24 13:12:34'),
+(146, 11, 17, 127, 77, 20.00, 5, 1, '2025-12-26 11:18:11'),
+(147, 11, 17, 128, NULL, 30.00, 5, 1, '2025-12-26 11:18:11'),
+(148, 11, 17, 129, 78, 60.00, 10, 1, '2025-12-26 11:18:11'),
+(149, 11, 17, 130, NULL, 50.00, 10, 1, '2025-12-26 11:51:32'),
+(150, 11, 17, 130, 79, 20.00, 5, 1, '2025-12-26 11:51:32'),
+(151, 11, 17, 131, NULL, 30.00, 5, 1, '2025-12-26 11:51:32'),
+(152, 11, 17, 131, 80, 50.00, 10, 1, '2025-12-26 11:51:32'),
+(153, 11, 17, 132, NULL, 100.00, 20, 1, '2025-12-26 11:51:32'),
+(154, 11, 17, 132, 81, 60.00, 10, 1, '2025-12-26 11:51:32'),
+(155, 11, 17, 133, NULL, 50.00, NULL, 1, '2025-12-26 11:57:38'),
+(156, 11, 17, 133, 82, 20.00, NULL, 1, '2025-12-26 11:57:38'),
+(157, 11, 17, 134, NULL, 50.00, 10, 1, '2025-12-26 12:00:25'),
+(158, 11, 17, 134, 83, 20.00, 10, 1, '2025-12-26 12:00:25'),
+(159, 11, 17, 135, NULL, 50.00, 10, 1, '2025-12-26 12:09:38'),
+(160, 11, 17, 135, 84, 20.00, 10, 1, '2025-12-26 12:09:38'),
+(161, 11, 17, 136, NULL, 50.00, 10, 1, '2025-12-26 12:14:01'),
+(162, 11, 17, 136, 85, 20.00, 5, 1, '2025-12-26 12:14:01'),
+(163, 11, 17, 137, NULL, 30.00, 5, 1, '2025-12-26 12:14:01'),
+(164, 11, 17, 137, 86, 50.00, 10, 1, '2025-12-26 12:14:01'),
+(165, 11, 17, 138, NULL, 100.00, 20, 1, '2025-12-26 12:14:01'),
+(166, 11, 17, 138, 87, 60.00, 10, 1, '2025-12-26 12:14:01');
 
 -- --------------------------------------------------------
 
@@ -345,7 +366,15 @@ INSERT INTO `inventory_logs` (`id`, `org_id`, `outlet_id`, `product_id`, `varian
 (72, 11, 17, 91, NULL, '', 25.00, 'variant stock update', NULL, '2025-12-23 15:35:51'),
 (73, 11, 17, 91, NULL, 'sale', -2.00, NULL, 63, '2025-12-23 15:36:03'),
 (74, 11, 17, 91, NULL, 'sale', -2.00, NULL, 64, '2025-12-23 15:41:57'),
-(75, 11, 17, 91, NULL, 'sale', -2.00, NULL, 65, '2025-12-23 15:42:04');
+(75, 11, 17, 91, NULL, 'sale', -2.00, NULL, 65, '2025-12-23 15:42:04'),
+(77, 11, 17, 135, NULL, '', 50.00, 'product created', NULL, '2025-12-26 12:09:38'),
+(78, 11, 17, 135, 84, '', 20.00, 'variant created', NULL, '2025-12-26 12:09:38'),
+(79, 11, 17, 136, NULL, '', 50.00, 'csv product import', NULL, '2025-12-26 12:14:01'),
+(80, 11, 17, 136, 85, '', 20.00, 'csv variant import', NULL, '2025-12-26 12:14:01'),
+(81, 11, 17, 137, NULL, '', 30.00, 'csv product import', NULL, '2025-12-26 12:14:01'),
+(82, 11, 17, 137, 86, '', 50.00, 'csv variant import', NULL, '2025-12-26 12:14:01'),
+(83, 11, 17, 138, NULL, '', 100.00, 'csv product import', NULL, '2025-12-26 12:14:01'),
+(84, 11, 17, 138, 87, '', 60.00, 'csv variant import', NULL, '2025-12-26 12:14:01');
 
 -- --------------------------------------------------------
 
@@ -402,7 +431,8 @@ INSERT INTO `loyalty_points` (`id`, `org_id`, `outlet_id`, `customer_id`, `sale_
 (36, 11, 17, 6, 62, 3.55, 0.00, '2025-12-23 15:23:47'),
 (37, 11, 17, 6, 63, 6.95, 0.00, '2025-12-23 15:36:03'),
 (38, 11, 17, 6, 64, 6.95, 0.00, '2025-12-23 15:41:57'),
-(39, 11, 17, 6, 65, 6.95, 0.00, '2025-12-23 15:42:04');
+(39, 11, 17, 6, 65, 6.95, 0.00, '2025-12-23 15:42:04'),
+(40, 11, 17, 6, 65, 0.00, 5.00, '2025-12-26 11:12:40');
 
 -- --------------------------------------------------------
 
@@ -428,7 +458,7 @@ INSERT INTO `numbering_schemes` (`id`, `org_id`, `next_invoice_no`, `created_at`
 (36, 5, 2, '2025-09-02 08:02:55', '2025-09-02 08:02:55'),
 (38, 6, 6, '2025-09-03 07:16:04', '2025-09-03 08:12:11'),
 (39, 9, 8, '2025-12-10 07:07:46', '2025-12-12 05:59:44'),
-(40, 11, 60, '2025-12-16 06:44:45', '2025-12-23 11:26:03');
+(40, 11, 69, '2025-12-16 06:44:45', '2025-12-26 10:10:37');
 
 -- --------------------------------------------------------
 
@@ -551,7 +581,8 @@ INSERT INTO `payments` (`id`, `sale_id`, `org_id`, `outlet_id`, `amount`, `payme
 (17, 55, 11, 17, 525.00, 'cash', '\"{\\\"original_amount\\\":525,\\\"redeem_points\\\":0,\\\"redeem_value\\\":0,\\\"user_meta\\\":{\\\"note\\\":\\\"Paid at counter\\\"},\\\"gst_summary\\\":{\\\"cgst\\\":12.5,\\\"sgst\\\":12.5,\\\"igst\\\":0}}\"', '2025-12-18 17:10:59'),
 (18, 58, 11, 17, 105.00, 'cash', '\"{\\\"original_amount\\\":105,\\\"redeem_points\\\":0,\\\"redeem_value\\\":0,\\\"user_meta\\\":{\\\"note\\\":\\\"Paid at counter\\\"},\\\"gst_summary\\\":{\\\"cgst\\\":2.5,\\\"sgst\\\":2.5,\\\"igst\\\":0}}\"', '2025-12-19 08:56:08'),
 (19, 57, 11, 17, 103.00, 'upi', '{\"original_amount\":105,\"redeem_points\":2,\"redeem_value\":2,\"user_meta\":{\"redeem_points\":2},\"gst_summary\":{\"cgst\":2.5,\"sgst\":2.5,\"igst\":0}}', '2025-12-19 09:01:20'),
-(20, 59, 11, 17, 668.00, 'cash', '\"{\\\"original_amount\\\":673,\\\"redeem_points\\\":5,\\\"redeem_value\\\":5,\\\"user_meta\\\":{\\\"redeem_points\\\":5,\\\"note\\\":\\\"Paid at counter\\\"},\\\"gst_summary\\\":{\\\"cgst\\\":51.3,\\\"sgst\\\":51.3,\\\"igst\\\":0}}\"', '2025-12-23 15:08:16');
+(20, 59, 11, 17, 668.00, 'cash', '\"{\\\"original_amount\\\":673,\\\"redeem_points\\\":5,\\\"redeem_value\\\":5,\\\"user_meta\\\":{\\\"redeem_points\\\":5,\\\"note\\\":\\\"Paid at counter\\\"},\\\"gst_summary\\\":{\\\"cgst\\\":51.3,\\\"sgst\\\":51.3,\\\"igst\\\":0}}\"', '2025-12-23 15:08:16'),
+(21, 65, 11, 17, 680.00, 'upi', '\"{\\\"original_amount\\\":695,\\\"manual_discount\\\":10,\\\"redeem_points\\\":5,\\\"redeem_value\\\":5,\\\"gst_summary\\\":{\\\"cgst\\\":52.98,\\\"sgst\\\":52.98,\\\"igst\\\":0},\\\"user_meta\\\":{\\\"redeem_points\\\":5,\\\"manual_discount\\\":10,\\\"note\\\":\\\"Paid at counter\\\"}}\"', '2025-12-26 11:12:40');
 
 -- --------------------------------------------------------
 
@@ -682,16 +713,28 @@ INSERT INTO `products` (`id`, `org_id`, `outlet_id`, `name`, `price`, `meta`, `c
 (114, 11, 17, 'Sample Product 27', 109.00, '{\"brand\":\"Philips\",\"size\":\"500g\",\"purchase_price\":85,\"barcode\":\"8900110011472\"}', '2025-12-22 20:15:17', 5.00, 10, 22),
 (115, 11, 17, 'Sample Product 28', 343.00, '{\"brand\":\"Himalaya\",\"size\":\"100g\",\"purchase_price\":332,\"discount\":{\"type\":\"flat\",\"value\":5},\"barcode\":\"8900110011564\"}', '2025-12-22 20:15:17', 5.00, 9, 20),
 (116, 11, 17, 'Sample Product 29', 106.00, '{\"brand\":\"Himalaya\",\"size\":\"250g\",\"purchase_price\":72,\"discount\":{\"type\":\"flat\",\"value\":10},\"barcode\":\"8900110011625\"}', '2025-12-22 20:15:17', 18.00, 9, 20),
-(117, 11, 17, 'Sample Product 30', 392.00, '{\"brand\":\"Vim\",\"size\":\"500g\",\"purchase_price\":377,\"discount\":{\"type\":\"percentage\",\"value\":10},\"barcode\":\"8900110011786\"}', '2025-12-22 20:15:17', 5.00, 10, 24),
+(117, 11, 17, 'poda 2 Powder Premium', 110.00, '{\"brand\":\"Tata\",\"size\":\"500g\",\"purchase_price\":85,\"discount\":{\"type\":\"percentage\",\"value\":12},\"barcode\":\"8900110011786\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-500-TATA\",\"description\":\"Updated premium tea\"}', '2025-12-22 20:15:17', 5.00, 10, 24),
 (118, 11, 17, 'apple', 100.00, '{\"brand\":\"Tata\",\"size\":\"500g\",\"purchase_price\":80,\"discount\":{\"type\":\"percentage\",\"value\":10},\"barcode\":\"8900110011861\"}', '2025-12-22 20:29:18', 5.00, 5, 25),
 (119, 11, 17, 'koiyakkai', 220.00, '{\"brand\":\"Bru\",\"size\":\"250g\",\"purchase_price\":180,\"barcode\":\"8900110011946\"}', '2025-12-22 20:29:18', 5.00, 5, 25),
 (120, 11, 17, 'maadhulai', 180.00, '{\"brand\":\"Clinic Plus\",\"size\":\"180ml\",\"purchase_price\":140,\"discount\":{\"type\":\"flat\",\"value\":20},\"barcode\":\"8900110012080\"}', '2025-12-22 20:29:18', 18.00, 8, 12),
 (121, 11, 17, 'lemon', 150.00, '{\"brand\":\"Philips\",\"size\":\"9W\",\"purchase_price\":110,\"barcode\":\"8900110012196\"}', '2025-12-22 20:29:18', 12.00, 9, 20),
 (122, 11, 17, 'kurkure', 68.00, '{\"purchase_price\":50,\"discount\":{\"type\":\"percentage\",\"value\":10},\"barcode\":\"8900110012295\"}', '2025-12-23 15:56:36', 5.00, 7, 10),
 (123, 11, 17, 'Tea Powder Premium', 110.00, '{\"purchase_price\":85,\"brand\":\"Tata\",\"size\":\"500g\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-500-TATA\",\"description\":\"Updated premium tea\",\"discount\":{\"type\":\"percentage\",\"value\":12},\"barcode\":\"8900110012370\"}', '2025-12-23 16:06:53', 5.00, 1, 2),
-(124, 11, 17, 'masala Tea Powder', 100.00, '{\"brand\":\"TATA\",\"size\":\"500g\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-500-TATA\",\"description\":\"Premium Assam Tea\",\"purchase_price\":80,\"discount\":{\"type\":\"percentage\",\"value\":10},\"barcode\":\"8900110012462\"}', '2025-12-23 16:44:28', 5.00, 1, 2),
+(124, 11, 17, 'poda Powder Premium', 110.00, '{\"brand\":\"Tata\",\"size\":\"500g\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-500-TATA\",\"description\":\"Updated premium tea\",\"purchase_price\":85,\"discount\":{\"type\":\"percentage\",\"value\":12},\"barcode\":\"8900110012462\"}', '2025-12-23 16:44:28', 5.00, 1, 2),
 (125, 11, 17, 'masala Coffee Powder', 180.00, '{\"brand\":\"BRU\",\"size\":\"250g\",\"dealer\":\"XYZ Traders\",\"sku\":\"COF-250-BRU\",\"description\":\"Strong coffee powder\",\"purchase_price\":140,\"barcode\":\"8900110012530\"}', '2025-12-23 16:44:28', 5.00, 1, 26),
-(126, 11, 17, 'brown Sugar', 45.00, '{\"brand\":\"LOCAL\",\"size\":\"1kg\",\"dealer\":\"Local Supplier\",\"sku\":\"SUG-1KG\",\"description\":\"White sugar\",\"purchase_price\":38,\"barcode\":\"8900110012646\"}', '2025-12-23 16:44:28', 0.00, 5, 6);
+(126, 11, 17, 'brown Sugar', 45.00, '{\"brand\":\"LOCAL\",\"size\":\"1kg\",\"dealer\":\"Local Supplier\",\"sku\":\"SUG-1KG\",\"description\":\"White sugar\",\"purchase_price\":38,\"barcode\":\"8900110012646\"}', '2025-12-23 16:44:28', 0.00, 5, 6),
+(127, 11, 17, 'masala123Tea Powder', 100.00, '{\"brand\":\"TATA\",\"size\":\"500g\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-500-TATA\",\"description\":\"Premium Assam Tea\",\"purchase_price\":80,\"discount\":{\"type\":\"percentage\",\"value\":10},\"barcode\":\"8900110012790\"}', '2025-12-26 11:18:11', 5.00, 1, 2),
+(128, 11, 17, 'masala123Coffee Powder', 180.00, '{\"brand\":\"BRU\",\"size\":\"250g\",\"dealer\":\"XYZ Traders\",\"sku\":\"COF-250-BRU\",\"description\":\"Strong coffee powder\",\"purchase_price\":140,\"barcode\":\"8900110012882\"}', '2025-12-26 11:18:11', 5.00, 1, 26),
+(129, 11, 17, 'brown123Sugar', 45.00, '{\"brand\":\"LOCAL\",\"size\":\"1kg\",\"dealer\":\"Local Supplier\",\"sku\":\"SUG-1KG\",\"description\":\"White sugar\",\"purchase_price\":38,\"barcode\":\"8900110012929\"}', '2025-12-26 11:18:11', 0.00, 5, 6),
+(130, 11, 17, 'masala1234Tea Powder', 100.00, '{\"brand\":\"TATA\",\"size\":\"500g\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-500-TATA\",\"description\":\"Premium Assam Tea\",\"purchase_price\":80,\"discount\":{\"type\":\"percentage\",\"value\":10},\"barcode\":\"8900110013087\"}', '2025-12-26 11:51:32', 5.00, 1, 2),
+(131, 11, 17, 'masala1234Coffee Powder', 180.00, '{\"brand\":\"BRU\",\"size\":\"250g\",\"dealer\":\"XYZ Traders\",\"sku\":\"COF-250-BRU\",\"description\":\"Strong coffee powder\",\"purchase_price\":140,\"discount\":{\"type\":\"flat\",\"value\":5},\"barcode\":\"8900110013193\"}', '2025-12-26 11:51:32', 5.00, 1, 26),
+(132, 11, 17, 'brown1234Sugar', 45.00, '{\"brand\":\"LOCAL\",\"size\":\"1kg\",\"dealer\":\"Local Supplier\",\"sku\":\"SUG-1KG\",\"description\":\"White sugar\",\"purchase_price\":38,\"discount\":{\"type\":\"flat\",\"value\":5},\"barcode\":\"8900110013278\"}', '2025-12-26 11:51:32', 0.00, 5, 6),
+(133, 11, 17, 'podi123Powder', 100.00, '{\"purchase_price\":80,\"brand\":\"Tata\",\"size\":\"500g\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-500-TATA\",\"description\":\"Premium Assam Tea\",\"discount\":{\"type\":\"percentage\",\"value\":10},\"barcode\":\"8900110013391\"}', '2025-12-26 11:57:38', 5.00, 1, 2),
+(134, 11, 17, 'podi12345Powder', 100.00, '{\"purchase_price\":80,\"brand\":\"Tata\",\"size\":\"500g\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-500-TATA\",\"description\":\"Premium Assam Tea\",\"discount\":{\"type\":\"percentage\",\"value\":10},\"barcode\":\"8900110013445\"}', '2025-12-26 12:00:25', 5.00, 1, 2),
+(135, 11, 17, 'podi12345678Powder', 100.00, '{\"purchase_price\":80,\"brand\":\"Tata\",\"size\":\"500g\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-500-TATA\",\"description\":\"Premium Assam Tea\",\"discount\":{\"type\":\"percentage\",\"value\":10},\"barcode\":\"8900110013568\"}', '2025-12-26 12:09:38', 5.00, 1, 2),
+(136, 11, 17, 'masala1234567Tea Powder', 100.00, '{\"brand\":\"TATA\",\"size\":\"500g\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-500-TATA\",\"description\":\"Premium Assam Tea\",\"purchase_price\":80,\"discount\":{\"type\":\"percentage\",\"value\":10},\"barcode\":\"8900110013643\"}', '2025-12-26 12:14:01', 5.00, 1, 2),
+(137, 11, 17, 'masala1234567Coffee Powder', 180.00, '{\"brand\":\"BRU\",\"size\":\"250g\",\"dealer\":\"XYZ Traders\",\"sku\":\"COF-250-BRU\",\"description\":\"Strong coffee powder\",\"purchase_price\":140,\"discount\":{\"type\":\"flat\",\"value\":5},\"barcode\":\"8900110013797\"}', '2025-12-26 12:14:01', 5.00, 1, 26),
+(138, 11, 17, 'brown1234567Sugar', 45.00, '{\"brand\":\"LOCAL\",\"size\":\"1kg\",\"dealer\":\"Local Supplier\",\"sku\":\"SUG-1KG\",\"description\":\"White sugar\",\"purchase_price\":38,\"discount\":{\"type\":\"flat\",\"value\":5},\"barcode\":\"8900110013841\"}', '2025-12-26 12:14:01', 0.00, 5, 6);
 
 -- --------------------------------------------------------
 
@@ -773,9 +816,20 @@ INSERT INTO `product_variants` (`id`, `product_id`, `name`, `price`, `created_at
 (66, 121, '340ml Bottle', 300.00, '2025-12-22 14:59:18', 12.00, '{\"purchase_price\":200,\"discount\":{\"type\":\"flat\",\"value\":5},\"barcode\":\"8900110012158\"}'),
 (67, 121, 'Large Pack', 220.00, '2025-12-22 15:36:50', 18.00, '{\"purchase_price\":180,\"discount\":{\"type\":\"percentage\",\"value\":10},\"barcode\":\"8900110012110\"}'),
 (68, 122, 'small pack', 12.00, '2025-12-23 10:26:36', 5.00, '{\"purchase_price\":10,\"discount\":{\"type\":\"flat\",\"value\":2},\"barcode\":\"8900110012264\"}'),
-(70, 123, '1kg Pack', 210.00, '2025-12-23 10:48:08', 0.00, '{\"brand\":\"Tata\",\"size\":\"1kg\",\"sku\":\"TEA-1KG-TATA\",\"description\":\"Family pack updated\",\"purchase_price\":170,\"discount\":{\"type\":\"flat\",\"value\":25},\"barcode\":\"8900110012356\"}'),
-(71, 124, '1kg Pack', 190.00, '2025-12-23 11:14:28', 5.00, '{\"brand\":\"TATA\",\"size\":\"1kg\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-1KG-TATA\",\"description\":\"Family pack\",\"purchase_price\":160,\"discount\":{\"type\":\"flat\",\"value\":20},\"barcode\":\"8900110012400\"}'),
-(72, 126, '500g Pack', 25.00, '2025-12-23 11:14:28', 0.00, '{\"brand\":\"LOCAL\",\"size\":\"500g\",\"dealer\":\"Local Supplier\",\"sku\":\"SUG-500G\",\"description\":\"Small pack\",\"purchase_price\":20,\"discount\":{\"type\":\"flat\",\"value\":5},\"barcode\":\"8900110012639\"}');
+(72, 126, '500g Pack', 25.00, '2025-12-23 11:14:28', 0.00, '{\"brand\":\"LOCAL\",\"size\":\"500g\",\"dealer\":\"Local Supplier\",\"sku\":\"SUG-500G\",\"description\":\"Small pack\",\"purchase_price\":20,\"discount\":{\"type\":\"flat\",\"value\":5},\"barcode\":\"8900110012639\"}'),
+(73, 123, '1kg Pack', 210.00, '2025-12-24 07:10:27', 0.00, '{\"brand\":\"Tata\",\"size\":\"1kg\",\"sku\":\"TEA-1KG-TATA\",\"description\":\"Family pack updated\",\"purchase_price\":170,\"discount\":{\"type\":\"flat\",\"value\":25},\"barcode\":\"8900110012318\"}'),
+(76, 124, '1kg Pack', 210.00, '2025-12-24 07:42:34', 0.00, '{\"brand\":\"Tata\",\"size\":\"1kg\",\"sku\":\"TEA-1KG-TATA\",\"description\":\"Family pack updated\",\"purchase_price\":170,\"discount\":{\"type\":\"flat\",\"value\":25},\"barcode\":\"8900110012417\"}'),
+(77, 127, '1kg Pack', 190.00, '2025-12-26 05:48:11', 5.00, '{\"brand\":\"TATA\",\"size\":\"1kg\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-1KG-TATA\",\"description\":\"Family pack\",\"purchase_price\":160,\"discount\":{\"type\":\"flat\",\"value\":20},\"barcode\":\"8900110012707\"}'),
+(78, 129, '500g Pack', 25.00, '2025-12-26 05:48:11', 0.00, '{\"brand\":\"LOCAL\",\"size\":\"500g\",\"dealer\":\"Local Supplier\",\"sku\":\"SUG-500G\",\"description\":\"Small pack\",\"purchase_price\":20,\"discount\":{\"type\":\"flat\",\"value\":5},\"barcode\":\"8900110012981\"}'),
+(79, 130, '1kg Pack', 190.00, '2025-12-26 06:21:32', 5.00, '{\"brand\":\"TATA\",\"size\":\"1kg\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-1KG-TATA\",\"description\":\"Family pack\",\"purchase_price\":160,\"discount\":{\"type\":\"flat\",\"value\":20},\"barcode\":\"8900110013018\"}'),
+(80, 131, '250g pack', 50.00, '2025-12-26 06:21:32', 5.00, '{\"brand\":\"RAM\",\"size\":\"250g\",\"dealer\":\"Local Supplier\",\"sku\":\"COFF-250G\",\"description\":\"Small pack\",\"purchase_price\":25,\"discount\":{\"type\":\"flat\",\"value\":56},\"barcode\":\"8900110013100\"}'),
+(81, 132, '500g Pack', 25.00, '2025-12-26 06:21:32', 2.00, '{\"brand\":\"LOCAL\",\"size\":\"500g\",\"dealer\":\"Local Supplier\",\"sku\":\"SUG-500G\",\"description\":\"Small pack\",\"purchase_price\":20,\"discount\":{\"type\":\"flat\",\"value\":5},\"barcode\":\"8900110013216\"}'),
+(82, 133, '1kg Pack', 190.00, '2025-12-26 06:27:38', 0.00, '{\"purchase_price\":160,\"brand\":\"Tata\",\"size\":\"1kg\",\"sku\":\"TEA-1KG-TATA\",\"description\":\"Family pack\",\"discount\":{\"type\":\"flat\",\"value\":20},\"barcode\":\"8900110013360\"}'),
+(83, 134, '1kg Pack', 190.00, '2025-12-26 06:30:25', 0.00, '{\"purchase_price\":160,\"brand\":\"Tata\",\"size\":\"1kg\",\"sku\":\"TEA-1KG-TATA\",\"description\":\"Family pack\",\"discount\":{\"type\":\"flat\",\"value\":20},\"barcode\":\"8900110013483\"}'),
+(84, 135, '1kg Pack', 190.00, '2025-12-26 06:39:38', 0.00, '{\"purchase_price\":160,\"brand\":\"Tata\",\"size\":\"1kg\",\"sku\":\"TEA-1KG-TATA\",\"description\":\"Family pack\",\"discount\":{\"type\":\"flat\",\"value\":20},\"barcode\":\"8900110013537\"}'),
+(85, 136, '1kg Pack', 190.00, '2025-12-26 06:44:01', 5.00, '{\"brand\":\"TATA\",\"size\":\"1kg\",\"dealer\":\"ABC Distributors\",\"sku\":\"TEA-1KG-TATA\",\"description\":\"Family pack\",\"purchase_price\":160,\"discount\":{\"type\":\"flat\",\"value\":20},\"barcode\":\"8900110013667\"}'),
+(86, 137, '250g pack', 50.00, '2025-12-26 06:44:01', 5.00, '{\"brand\":\"RAM\",\"size\":\"250g\",\"dealer\":\"Local Supplier\",\"sku\":\"COFF-250G\",\"description\":\"Small pack\",\"purchase_price\":25,\"discount\":{\"type\":\"flat\",\"value\":56},\"barcode\":\"8900110013780\"}'),
+(87, 138, '500g Pack', 25.00, '2025-12-26 06:44:01', 2.00, '{\"brand\":\"LOCAL\",\"size\":\"500g\",\"dealer\":\"Local Supplier\",\"sku\":\"SUG-500G\",\"description\":\"Small pack\",\"purchase_price\":20,\"discount\":{\"type\":\"flat\",\"value\":5},\"barcode\":\"8900110013865\"}');
 
 -- --------------------------------------------------------
 
@@ -841,7 +895,7 @@ INSERT INTO `sales` (`id`, `invoice_no`, `org_id`, `outlet_id`, `customer_id`, `
 (62, NULL, 11, 17, 6, 0, 355.00, 5.00, 8.45, 8.45, 0.00, 0.10, NULL, '2025-12-23 15:23:47', NULL, 338.00, 0.00),
 (63, NULL, 11, 17, 6, 0, 695.00, 5.00, 52.98, 52.98, 0.00, 0.44, NULL, '2025-12-23 15:36:03', NULL, 588.60, 0.00),
 (64, NULL, 11, 17, 6, 0, 695.00, 0.00, 52.98, 52.98, 0.00, 0.44, NULL, '2025-12-23 15:41:57', NULL, 588.60, 0.00),
-(65, NULL, 11, 17, 6, 0, 695.00, 5.00, 52.98, 52.98, 0.00, 0.44, NULL, '2025-12-23 15:42:04', NULL, 588.60, 0.00);
+(65, NULL, 11, 17, 6, 1, 695.00, 5.00, 52.98, 52.98, 0.00, 0.44, NULL, '2025-12-23 15:42:04', NULL, 588.60, 0.00);
 
 -- --------------------------------------------------------
 
@@ -1331,19 +1385,19 @@ ALTER TABLE `features`
 -- AUTO_INCREMENT for table `inventory`
 --
 ALTER TABLE `inventory`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=142;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=167;
 
 --
 -- AUTO_INCREMENT for table `inventory_logs`
 --
 ALTER TABLE `inventory_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=85;
 
 --
 -- AUTO_INCREMENT for table `loyalty_points`
 --
 ALTER TABLE `loyalty_points`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- AUTO_INCREMENT for table `numbering_schemes`
@@ -1367,19 +1421,19 @@ ALTER TABLE `outlets`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=127;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=139;
 
 --
 -- AUTO_INCREMENT for table `product_variants`
 --
 ALTER TABLE `product_variants`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
 
 --
 -- AUTO_INCREMENT for table `sales`

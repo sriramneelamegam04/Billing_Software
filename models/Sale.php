@@ -11,10 +11,11 @@ class Sale
 
     /* =====================================================
        CREATE SALE
-       - Backward compatible
-       - Supports product/variant discounts
+       - DB schema aligned
+       - Supports SALE & RETURN
+       - Item-level discount snapshot
        - GST safe
-       - Audit ready
+       - Dashboard ready
     ===================================================== */
     public function create(array $data): int
     {
@@ -23,31 +24,30 @@ class Sale
         ----------------------------------------- */
         $meta = [];
 
-        // existing meta support
         if (!empty($data['meta']) && is_array($data['meta'])) {
             $meta = $data['meta'];
         }
 
-        // 🔥 store item-level discount snapshot
+        /* ---------- ITEM SNAPSHOT (AUDIT) ---------- */
         if (!empty($data['items']) && is_array($data['items'])) {
 
             $meta['items_summary'] = [];
 
             foreach ($data['items'] as $item) {
                 $meta['items_summary'][] = [
-                    'product_id'       => $item['product_id'],
-                    'variant_id'       => $item['variant_id'] ?? null,
-                    'qty'              => $item['quantity'],
-                    'original_rate'    => $item['original_rate'] ?? $item['rate'],
-                    'final_rate'       => $item['rate'],
-                    'discount'         => $item['discount'] ?? null,
-                    'discount_amount'  => $item['discount_amount'] ?? 0,
-                    'taxable_amount'   => $item['taxable_amount'] ?? 0,
-                    'gst_rate'         => $item['gst_rate'] ?? 0,
-                    'cgst'             => $item['cgst'] ?? 0,
-                    'sgst'             => $item['sgst'] ?? 0,
-                    'igst'             => $item['igst'] ?? 0,
-                    'line_total'       => $item['amount'] ?? 0
+                    'product_id'      => $item['product_id'],
+                    'variant_id'      => $item['variant_id'] ?? null,
+                    'qty'             => $item['quantity'],
+                    'original_rate'   => $item['original_rate'] ?? $item['rate'],
+                    'final_rate'      => $item['rate'],
+                    'discount'        => $item['discount'] ?? null,
+                    'discount_amount' => $item['discount_amount'] ?? 0,
+                    'taxable_amount'  => $item['taxable_amount'] ?? 0,
+                    'gst_rate'        => $item['gst_rate'] ?? 0,
+                    'cgst'            => $item['cgst'] ?? 0,
+                    'sgst'            => $item['sgst'] ?? 0,
+                    'igst'            => $item['igst'] ?? 0,
+                    'line_total'      => $item['amount'] ?? 0
                 ];
             }
         }
@@ -57,7 +57,16 @@ class Sale
             : null;
 
         /* -----------------------------------------
-           INSERT SALE
+           GST TOTAL (IMPORTANT)
+        ----------------------------------------- */
+        $cgst = round($data['cgst'] ?? 0, 2);
+        $sgst = round($data['sgst'] ?? 0, 2);
+        $igst = round($data['igst'] ?? 0, 2);
+
+        $gst_total = round($cgst + $sgst + $igst, 2);
+
+        /* -----------------------------------------
+           INSERT SALE (SCHEMA MATCHED)
         ----------------------------------------- */
         $stmt = $this->pdo->prepare("
             INSERT INTO sales (
@@ -73,8 +82,10 @@ class Sale
                 cgst,
                 sgst,
                 igst,
+                gst_total,
                 round_off,
 
+                note,
                 meta,
                 created_at
             ) VALUES (
@@ -90,8 +101,10 @@ class Sale
                 :cgst,
                 :sgst,
                 :igst,
+                :gst_total,
                 :round_off,
 
+                :note,
                 :meta,
                 NOW()
             )
@@ -107,19 +120,26 @@ class Sale
                                 ? (int)$data['customer_id']
                                 : null,
 
-            ':status'          => $data['status'] ?? 0,
-            ':taxable_amount'  => round($data['taxable_amount'] ?? 0, 2),
-            ':total_amount'    => round($data['total_amount'], 2),
+            // status: 0 = sale, -1 = return (your convention)
+            ':status'        => $data['status'] ?? 0,
 
-            // 🔥 sale-level discount ONLY
-            ':discount'        => round($data['discount'] ?? 0, 2),
+            ':taxable_amount'=> round($data['taxable_amount'] ?? 0, 2),
+            ':total_amount'  => round($data['total_amount'], 2),
 
-            ':cgst'            => round($data['cgst'] ?? 0, 2),
-            ':sgst'            => round($data['sgst'] ?? 0, 2),
-            ':igst'            => round($data['igst'] ?? 0, 2),
-            ':round_off'       => round($data['round_off'] ?? 0, 2),
+            // sale-level discount ONLY
+            ':discount'      => round($data['discount'] ?? 0, 2),
 
-            ':meta'            => $meta_json
+            ':cgst'          => $cgst,
+            ':sgst'          => $sgst,
+            ':igst'          => $igst,
+            ':gst_total'     => $gst_total,
+
+            ':round_off'     => round($data['round_off'] ?? 0, 2),
+
+            // optional note (return reason / admin remark)
+            ':note'          => $data['note'] ?? null,
+
+            ':meta'          => $meta_json
         ]);
 
         return (int)$this->pdo->lastInsertId();

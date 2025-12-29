@@ -335,34 +335,94 @@ if (isset($idx['variant_name']) && trim($row[$idx['variant_name']] ?? '') !== ''
 
 
         /* -------------------------------------------------
-           INVENTORY + LOW STOCK LIMIT
-        ------------------------------------------------- */
-        $qty = 0;
-        if ($variant_id && isset($idx['variant_qty'])) {
-            $qty = (int)$row[$idx['variant_qty']];
-        } elseif (!$variant_id && isset($idx['product_qty'])) {
-            $qty = (int)$row[$idx['product_qty']];
-        }
+   INVENTORY (PRODUCT LEVEL — ALWAYS)
+------------------------------------------------- */
+$product_qty = isset($idx['product_qty'])
+    ? (int)$row[$idx['product_qty']]
+    : 0;
 
-        $low_stock = null;
-        if ($variant_id && isset($idx['variant_low_stock_limit'])) {
-            $low_stock = (int)$row[$idx['variant_low_stock_limit']];
-        } elseif (!$variant_id && isset($idx['low_stock_limit'])) {
-            $low_stock = (int)$row[$idx['low_stock_limit']];
-        }
+$product_low_stock = isset($idx['low_stock_limit'])
+    ? (int)$row[$idx['low_stock_limit']]
+    : null;
 
-        $pdo->prepare("
-            INSERT INTO inventory
-            (org_id,outlet_id,product_id,variant_id,quantity,low_stock_limit)
-            VALUES (?,?,?,?,?,?)
-        ")->execute([
-            $org_id,
-            $outlet_id,
-            $product_id,
-            $variant_id,
-            $qty,
-            $low_stock
-        ]);
+
+
+/* ✅ ALWAYS INSERT PRODUCT INVENTORY */
+$pdo->prepare("
+    INSERT INTO inventory
+    (org_id,outlet_id,product_id,variant_id,quantity,low_stock_limit)
+    VALUES (?,?,?,?,?,?)
+")->execute([
+    $org_id,
+    $outlet_id,
+    $product_id,
+    null,
+    $product_qty,
+    $product_low_stock
+]);
+
+/* 🧾 INVENTORY LOG - PRODUCT (CSV IMPORT) */
+if ($product_qty > 0) {
+    $pdo->prepare("
+        INSERT INTO inventory_logs
+        (org_id,outlet_id,product_id,variant_id,change_type,quantity_change,note)
+        VALUES (?,?,?,?,?,?,?)
+    ")->execute([
+        $org_id,
+        $outlet_id,
+        $product_id,
+        null,
+        'import',
+        $product_qty,
+        'csv product import'
+    ]);
+}
+
+
+/* -------------------------------------------------
+   INVENTORY (VARIANT LEVEL — IF EXISTS)
+------------------------------------------------- */
+if ($variant_id) {
+
+    $variant_qty = isset($idx['variant_qty'])
+        ? (int)$row[$idx['variant_qty']]
+        : 0;
+
+    $variant_low_stock = isset($idx['variant_low_stock_limit'])
+        ? (int)$row[$idx['variant_low_stock_limit']]
+        : null;
+
+    $pdo->prepare("
+        INSERT INTO inventory
+        (org_id,outlet_id,product_id,variant_id,quantity,low_stock_limit)
+        VALUES (?,?,?,?,?,?)
+    ")->execute([
+        $org_id,
+        $outlet_id,
+        $product_id,
+        $variant_id,
+        $variant_qty,
+        $variant_low_stock
+    ]);
+}
+
+/* 🧾 INVENTORY LOG - VARIANT (CSV IMPORT) */
+if ($variant_id && $variant_qty > 0) {
+    $pdo->prepare("
+        INSERT INTO inventory_logs
+        (org_id,outlet_id,product_id,variant_id,change_type,quantity_change,note)
+        VALUES (?,?,?,?,?,?,?)
+    ")->execute([
+        $org_id,
+        $outlet_id,
+        $product_id,
+        $variant_id,
+        'import',
+        $variant_qty,
+        'csv variant import'
+    ]);
+}
+
 
         $pdo->commit();
 

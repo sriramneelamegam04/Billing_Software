@@ -149,6 +149,24 @@ if (!empty($input['discount_type']) && !empty($input['discount_value'])) {
         $low_stock_limit
     ]);
 
+    /* INVENTORY LOG - PRODUCT CREATE */
+if ($quantity > 0) {
+    $pdo->prepare("
+        INSERT INTO inventory_logs
+        (org_id,outlet_id,product_id,variant_id,change_type,quantity_change,note)
+        VALUES (?,?,?,?,?,?,?)
+    ")->execute([
+        $authUser['org_id'],
+        $outlet_id,
+        $product_id,
+        null,
+        'create',
+        $quantity,
+        'product created'
+    ]);
+}
+
+
     /* VARIANTS */
     $variantModel = new ProductVariant($pdo);
     $variantResponses = [];
@@ -228,6 +246,26 @@ if (!empty($v['discount_type']) && !empty($v['discount_value'])) {
                 (int)($v['quantity'] ?? 0),
                 isset($v['low_stock_limit']) ? (int)$v['low_stock_limit'] : null
             ]);
+            
+            /* INVENTORY LOG - VARIANT CREATE */
+$variantQty = (int)($v['quantity'] ?? 0);
+
+if ($variantQty > 0) {
+    $pdo->prepare("
+        INSERT INTO inventory_logs
+        (org_id,outlet_id,product_id,variant_id,change_type,quantity_change,note)
+        VALUES (?,?,?,?,?,?,?)
+    ")->execute([
+        $authUser['org_id'],
+        $outlet_id,
+        $product_id,
+        $variant_id,
+        'create',
+        $variantQty,
+        'variant created'
+    ]);
+}
+
         }
     }
 

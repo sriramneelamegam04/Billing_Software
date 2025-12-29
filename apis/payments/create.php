@@ -17,13 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
     exit;
 }
 
-/* -------------------------------------------------
-   METHOD VALIDATION
-------------------------------------------------- */
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(["success" => false, "msg" => "Method Not Allowed. Use POST"]);
-    exit;
+    sendError("Method Not Allowed. Use POST", 405);
 }
 
 /* -------------------------------------------------
@@ -33,24 +28,19 @@ $authUser = getCurrentUser();
 if (!$authUser) sendError("Unauthorized", 401);
 
 /* -------------------------------------------------
-   SUBSCRIPTION CHECK
+   SUBSCRIPTION
 ------------------------------------------------- */
 $subscriptionModel = new Subscription($pdo);
-$activeSub = $subscriptionModel->getActive($authUser['org_id']);
-
-if (!$activeSub) {
+if (!$subscriptionModel->getActive($authUser['org_id'])) {
     sendError("Active subscription required", 403);
 }
 
 /* -------------------------------------------------
-   PARSE JSON
+   INPUT
 ------------------------------------------------- */
 $input = json_decode(file_get_contents("php://input"), true);
 if (!$input) sendError("Invalid JSON");
 
-/* -------------------------------------------------
-   REQUIRED FIELDS
-------------------------------------------------- */
 foreach (['sale_id','payment_mode'] as $f) {
     if (!isset($input[$f]) || $input[$f] === '') {
         sendError("$f is required");
@@ -62,7 +52,7 @@ $payment_mode = trim($input['payment_mode']);
 $meta_input   = $input['meta'] ?? [];
 
 /* -------------------------------------------------
-   FETCH SALE (SINGLE SOURCE OF TRUTH)
+   FETCH SALE
 ------------------------------------------------- */
 $stmt = $pdo->prepare("
     SELECT 
@@ -71,7 +61,6 @@ $stmt = $pdo->prepare("
         s.outlet_id,
         s.customer_id,
         s.total_amount,
-        s.discount,
         s.cgst,
         s.sgst,
         s.igst,
@@ -86,36 +75,52 @@ $stmt->execute([$sale_id, $authUser['org_id']]);
 $sale = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$sale) {
-    sendError("Sale not found or does not belong to your organization", 404);
+    sendError("Sale not found", 404);
 }
 
-/* -------------------------------------------------
-   ALREADY PAID CHECK
-------------------------------------------------- */
 if ((int)$sale['status'] === 1) {
-    sendError("Payment already completed for this sale", 409);
+    sendError("Payment already completed", 409);
 }
 
 /* -------------------------------------------------
-   BASE AMOUNTS (FROM SALE)
+   BASE AMOUNT
 ------------------------------------------------- */
 $original_amount = (float)$sale['total_amount'];
 $final_amount    = $original_amount;
 
-$vertical       = strtolower($sale['vertical'] ?? 'generic');
-$redeem_points  = 0;
-$redeem_value   = 0;
+$vertical = strtolower($sale['vertical'] ?? 'generic');
 
-/* -------------------------------------------------
-   LOYALTY REDEMPTION (OPTIONAL)
-------------------------------------------------- */
+/* =================================================
+   MANUAL DISCOUNT
+================================================= */
+$manual_discount = 0;
+
+if (isset($meta_input['manual_discount'])) {
+    $manual_discount = (float)$meta_input['manual_discount'];
+
+    if ($manual_discount < 0) {
+        sendError("manual_discount cannot be negative");
+    }
+
+    if ($manual_discount > $original_amount) {
+        sendError("manual_discount cannot exceed bill amount");
+    }
+
+    $final_amount -= $manual_discount;
+}
+
+/* =================================================
+   LOYALTY REDEMPTION
+================================================= */
+$redeem_points = 0;
+$redeem_value  = 0;
+
 if ($vertical !== 'restaurant' && isset($meta_input['redeem_points'])) {
 
     $redeem_points = (float)$meta_input['redeem_points'];
 
     if ($redeem_points > 0) {
 
-        // Fetch available balance
         $stmt = $pdo->prepare("
             SELECT COALESCE(SUM(points_earned - points_redeemed),0)
             FROM loyalty_points
@@ -133,64 +138,91 @@ if ($vertical !== 'restaurant' && isset($meta_input['redeem_points'])) {
 
         // ₹1 per point
         $redeem_value = $redeem_points;
-        $final_amount = max(0, $original_amount - $redeem_value);
+        $final_amount -= $redeem_value;
     }
 }
 
-/* -------------------------------------------------
-   MAIN TRANSACTION
-------------------------------------------------- */
+/* SAFETY */
+$final_amount = max(0, round($final_amount, 2));
+
+/* =================================================
+   TRANSACTION
+================================================= */
 try {
     $pdo->beginTransaction();
 
     /* -------------------------
-       INSERT PAYMENT
+       PAYMENT ENTRY
     ------------------------- */
     $paymentModel = new Payment($pdo);
     $payment_id = $paymentModel->create([
         'sale_id'      => $sale_id,
         'org_id'       => $sale['org_id'],
         'outlet_id'    => $sale['outlet_id'],
-        'amount'       => round($final_amount,2),
+        'amount'       => $final_amount,
         'payment_mode' => $payment_mode,
         'meta'         => json_encode([
             'original_amount' => round($original_amount,2),
+            'manual_discount' => round($manual_discount,2),
             'redeem_points'   => $redeem_points,
             'redeem_value'    => round($redeem_value,2),
-            'user_meta'       => $meta_input,
             'gst_summary' => [
                 'cgst' => (float)$sale['cgst'],
                 'sgst' => (float)$sale['sgst'],
                 'igst' => (float)$sale['igst']
-            ]
+            ],
+            'user_meta' => $meta_input
         ], JSON_UNESCAPED_UNICODE)
     ]);
 
     /* -------------------------
-       INSERT LOYALTY REDEEM ENTRY
+       LOYALTY LOG
     ------------------------- */
-    if ($redeem_points > 0) {
-        $stmt = $pdo->prepare("
-            INSERT INTO loyalty_points
-            (org_id,outlet_id,customer_id,sale_id,points_earned,points_redeemed)
-            VALUES (?,?,?,?,0,?)
-        ");
-        $stmt->execute([
-            $sale['org_id'],
-            $sale['outlet_id'],
-            $sale['customer_id'],
-            $sale_id,
-            $redeem_points
-        ]);
-    }
+  /* -------------------------
+   LOYALTY REDEEM LOG (FIXED)
+------------------------- */
+if ($redeem_points > 0) {
+
+    // 🔥 One row ONLY for redemption
+    $stmt = $pdo->prepare("
+        INSERT INTO loyalty_points
+        (
+            org_id,
+            outlet_id,
+            customer_id,
+            sale_id,
+            points_earned,
+            points_redeemed,
+            created_at
+        )
+        VALUES
+        (
+            :org_id,
+            :outlet_id,
+            :customer_id,
+            :sale_id,
+            0,
+            :points_redeemed,
+            NOW()
+        )
+    ");
+
+    $stmt->execute([
+        ':org_id'           => $sale['org_id'],
+        ':outlet_id'        => $sale['outlet_id'],
+        ':customer_id'      => $sale['customer_id'],
+        ':sale_id'          => $sale_id,
+        ':points_redeemed'  => $redeem_points
+    ]);
+}
+
 
     /* -------------------------
-       UPDATE SALE → PAID
+       SALE PAID
     ------------------------- */
-    $stmt = $pdo->prepare("
+    $pdo->prepare("
         UPDATE sales SET status=1 WHERE id=? AND org_id=?
-    ");
-    $stmt->execute([$sale_id, $sale['org_id']]);
+    ")->execute([$sale_id, $sale['org_id']]);
 
     $pdo->commit();
 
@@ -202,6 +234,7 @@ try {
         'sale_id'         => $sale_id,
         'payment_mode'    => $payment_mode,
         'original_amount' => round($original_amount,2),
+        'manual_discount' => round($manual_discount,2),
         'redeemed_points' => $redeem_points,
         'redeem_value'    => round($redeem_value,2),
         'final_amount'    => round($final_amount,2),

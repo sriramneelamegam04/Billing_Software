@@ -30,6 +30,7 @@ $org_id    = (int)($_REQUEST['org_id'] ?? 0);
 $outlet_id = $_REQUEST['outlet_id'] ?? null;
 $date_from = $_REQUEST['date_from'] ?? null;
 $date_to   = $_REQUEST['date_to'] ?? null;
+$today     = isset($_GET['today']) && (int)$_GET['today'] === 1;
 
 /* -------------------------------------------------
    ROLE RESTRICTION
@@ -54,6 +55,12 @@ if ($outlet_id) {
     $where .= " AND s.outlet_id = :outlet_id";
     $params[':outlet_id'] = $outlet_id;
 }
+
+/* 🔥 TODAY FILTER (only if date range not provided) */
+if ($today && !$date_from && !$date_to) {
+    $where .= " AND DATE(s.created_at) = CURDATE()";
+}
+
 if ($date_from) {
     $where .= " AND DATE(s.created_at) >= :df";
     $params[':df'] = $date_from;
