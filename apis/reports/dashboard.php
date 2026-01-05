@@ -139,86 +139,224 @@ if ($date_to) {
     $stmt->execute($paramsProd);
     $products = (int)$stmt->fetchColumn();
 
-    /* -------------------------------------------------
-       SALES TOTAL
-    ------------------------------------------------- */
+  /* -------------------------------------------------
+   SALES TOTAL (FIXED FOR DOUBLE-ENCODED META)
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT
+        COALESCE(SUM(CASE 
+            WHEN s.total_amount >= 0 THEN si.amount 
+            ELSE 0 
+        END),0) AS sales_amount,
+
+        COALESCE(SUM(CASE 
+            WHEN s.total_amount < 0 THEN ABS(si.amount)
+            ELSE 0
+        END),0) AS return_amount,
+
+        COALESCE(SUM(
+            CAST(
+                JSON_UNQUOTE(
+                    JSON_EXTRACT(
+                        JSON_UNQUOTE(p.meta),
+                        '$.manual_discount'
+                    )
+                ) AS DECIMAL(10,2)
+            )
+        ),0) AS discount
+
+    FROM sales s
+    LEFT JOIN sale_items si ON si.sale_id = s.id
+    LEFT JOIN payments p 
+        ON p.sale_id = s.id AND p.is_active = 1
+    WHERE $whereSales
+");
+$stmt->execute($paramsSales);
+$row = $stmt->fetch(PDO::FETCH_ASSOC);
+/* ---------- RETURN COUNT ---------- */
+$stmt = $pdo->prepare("
+    SELECT COUNT(DISTINCT s.id)
+    FROM sales s
+    WHERE $whereSales
+      AND s.status = 2
+      AND s.total_amount < 0
+");
+$stmt->execute($paramsSales);
+$return_count = (int)$stmt->fetchColumn();
+
+
+$sales_amount  = (float)$row['sales_amount'];
+$return_amount = (float)$row['return_amount'];
+$discount      = (float)$row['discount'];
+
+// loyalty_point//
+
+/* -------------------------------------------------
+   LOYALTY REDEEMED (SOURCE OF TRUTH)
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT COALESCE(SUM(lp.points_redeemed), 0)
+    FROM loyalty_points lp
+    JOIN sales s ON s.id = lp.sale_id
+    WHERE s.org_id = :org_id
+     AND s.status = 1
+");
+
+$paramsLp = [':org_id' => $org_id];
+
+if ($outlet_id) {
     $stmt = $pdo->prepare("
-        SELECT
-            COALESCE(SUM(si.amount),0) AS items_amount,
-            COALESCE(SUM(s.discount),0) AS discount
-        FROM sales s
-        LEFT JOIN sale_items si ON si.sale_id = s.id
-        WHERE $whereSales
+        SELECT COALESCE(SUM(lp.points_redeemed), 0)
+        FROM loyalty_points lp
+        JOIN sales s ON s.id = lp.sale_id
+        WHERE s.org_id = :org_id
+          AND s.outlet_id = :outlet_id
     ");
-    $stmt->execute($paramsSales);
-    $row = $stmt->fetch();
+    $paramsLp[':outlet_id'] = $outlet_id;
+}
 
-    $items_amount = (float)$row['items_amount']; // includes negative
-$discount     = (float)$row['discount'];
+if ($date_from) {
+    $stmt = $pdo->prepare($stmt->queryString . " AND s.created_at >= :df_start");
+    $paramsLp[':df_start'] = $date_from . " 00:00:00";
+}
 
-$sales_only   = max(0, $items_amount);
-$returns_only = abs(min(0, $items_amount));
+if ($date_to) {
+    $stmt = $pdo->prepare($stmt->queryString . " AND s.created_at <= :dt_end");
+    $paramsLp[':dt_end'] = $date_to . " 23:59:59";
+}
 
-$net_sales    = $sales_only - $returns_only - $discount;
+$stmt->execute($paramsLp);
+$loyalty_redeemed = (float)$stmt->fetchColumn();
 
 
-    /* -------------------------------------------------
-       COLLECTIONS
-    ------------------------------------------------- */
-    $stmt = $pdo->prepare("
-        SELECT COALESCE(SUM(p.amount),0)
-        FROM sales s
-        LEFT JOIN payments p ON p.sale_id = s.id
-        WHERE $whereSales
-    ");
-    $stmt->execute($paramsSales);
-    $collections = (float)$stmt->fetchColumn();
 
-    $outstanding = $net_sales - $collections;
+/* -------------------------------------------------
+   COLLECTIONS (CASH ONLY – CORRECT)
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT COALESCE(SUM(p.amount), 0)
+    FROM sales s
+    JOIN payments p
+      ON p.sale_id = s.id
+     AND p.is_active = 1
+    WHERE $whereSales
+      AND s.total_amount > 0
+      AND s.status = 1
+      AND p.amount > 0
+");
+$stmt->execute($paramsSales);
+$collections = (float)$stmt->fetchColumn();
 
-    /* -------------------------------------------------
-       TOP PRODUCTS
-    ------------------------------------------------- */
-    $stmt = $pdo->prepare("
-        SELECT
-            si.product_id,
-            pr.name AS product_name,
-            SUM(si.quantity) AS qty,
-            SUM(si.amount) AS amount
-        FROM sales s
-        JOIN sale_items si ON si.sale_id = s.id
-        JOIN products pr ON pr.id = si.product_id
-        WHERE $whereSales
-        GROUP BY si.product_id, pr.name
-        ORDER BY qty DESC
-        LIMIT 5
-    ");
-    $stmt->execute($paramsSales);
-    $top_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    /* -------------------------------------------------
-       SALES SUMMARY (DATE WISE)
-    ------------------------------------------------- */
-    $stmt = $pdo->prepare("
+//refunf //
+
+$stmt = $pdo->prepare("
+    SELECT COALESCE(SUM(ABS(p.amount)),0)
+    FROM sales s
+    JOIN payments p
+      ON p.sale_id = s.id
+     AND p.is_active = 1
+    WHERE $whereSales
+      AND s.total_amount < 0
+      AND p.amount < 0
+");
+$stmt->execute($paramsSales);
+$refunds = (float)$stmt->fetchColumn();
+// ✅ NET SALES (CREDIT BASIS)
+$net_sales = round(
+    $sales_amount
+    - $return_amount
+    - $discount
+    - $loyalty_redeemed,
+2);
+if ($net_sales < 0) $net_sales = 0;
+
+$outstanding = round(max(0, $net_sales - $collections), 2);
+
+/* -------------------------------------------------
+   TOP PRODUCTS (LATEST POSITIVE SALE ONLY)
+------------------------------------------------- */
+$stmt = $pdo->prepare("
+    SELECT
+        si.product_id,
+        pr.name AS product_name,
+        si.quantity AS qty,
+        si.amount   AS amount
+    FROM sales s
+    JOIN sale_items si ON si.sale_id = s.id
+    JOIN products pr   ON pr.id = si.product_id
+    WHERE $whereSales
+      AND s.total_amount > 0
+      AND s.id = (
+          SELECT s2.id
+          FROM sales s2
+          WHERE s2.org_id = s.org_id
+            AND s2.total_amount > 0
+          ORDER BY s2.created_at DESC
+          LIMIT 1
+      )
+");
+
+$stmt->execute($paramsSales);
+$top_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+
+/* -------------------------------------------------
+   SALES SUMMARY (DATE WISE – CORRECTED)
+------------------------------------------------- */
+$stmt = $pdo->prepare("
     SELECT
         DATE(s.created_at) AS sdate,
 
-        COUNT(DISTINCT CASE WHEN s.total_amount >= 0 THEN s.id END) AS sale_bills,
-        COUNT(DISTINCT CASE WHEN s.total_amount < 0 THEN s.id END)  AS return_bills,
+        COUNT(DISTINCT CASE
+            WHEN s.total_amount >= 0 THEN s.id
+        END) AS sale_bills,
 
-        COALESCE(SUM(CASE WHEN s.total_amount >= 0 THEN si.amount ELSE 0 END),0) AS sales_amount,
-        COALESCE(SUM(CASE WHEN s.total_amount < 0 THEN ABS(si.amount) ELSE 0 END),0) AS return_amount,
+        COUNT(DISTINCT CASE
+            WHEN s.total_amount < 0 AND s.status = 2 THEN s.id
+        END) AS return_bills,
 
-        COALESCE(SUM(s.discount),0) AS discount
+        /* ✅ SALES AMOUNT (ITEM LEVEL) */
+        COALESCE(SUM(
+            CASE
+                WHEN s.total_amount >= 0 THEN si.amount
+                ELSE 0
+            END
+        ), 0) AS sales_amount,
+
+        /* ✅ DISCOUNT (SALE LEVEL – SAFE) */
+        COALESCE(SUM(pd.manual_discount), 0) AS discount
+
     FROM sales s
-    LEFT JOIN sale_items si ON si.sale_id = s.id
+    LEFT JOIN sale_items si
+        ON si.sale_id = s.id
+
+    /* 🔥 PAYMENT DISCOUNT AS SUBQUERY */
+    LEFT JOIN (
+        SELECT
+            sale_id,
+            CAST(
+                JSON_UNQUOTE(
+                    JSON_EXTRACT(
+                        JSON_UNQUOTE(meta),
+                        '$.manual_discount'
+                    )
+                ) AS DECIMAL(10,2)
+            ) AS manual_discount
+        FROM payments
+        WHERE is_active = 1
+    ) pd ON pd.sale_id = s.id
+
     WHERE $whereSales
     GROUP BY DATE(s.created_at)
     ORDER BY sdate ASC
 ");
 
-    $stmt->execute($paramsSales);
-    $sales_summary = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt->execute($paramsSales);
+$sales_summary = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
 
     /* -------------------------------------------------
        FINAL RESPONSE
@@ -230,13 +368,20 @@ $net_sales    = $sales_only - $returns_only - $discount;
             'date_to'   => $date_to
         ],
         'kpis' => [
-            'customers'   => $customers,
-            'products'    => $products,
-            'total_sales' => $items_amount,
-            'discount'    => $discount,
-            'net_sales'   => $net_sales,
-            'collections' => $collections,
-            'outstanding' => $outstanding
+    'customers'    => $customers,
+    'products'     => $products,
+    'total_sales'  => $sales_amount,
+    'return_count'  => $return_count,
+    'return_amount' => $return_amount,
+    'loyalty_redeemed' => $loyalty_redeemed,
+    'discount'     => $discount,
+
+    'net_sales'    => $net_sales,
+
+    'collections'  => $collections,
+    'refunds'      => $refunds,
+
+    'outstanding'  => $outstanding
         ],
         'sales_summary' => $sales_summary,
         'top_products'  => $top_products

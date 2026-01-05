@@ -17,37 +17,34 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendError("Method Not Allowed. Use GET", 405);
 }
 
-/* -------------------------------------------------
-   AUTH
-------------------------------------------------- */
+/* ================= AUTH ================= */
 $authUser = getCurrentUser();
 if (!$authUser) sendError("Unauthorized", 401);
 
-/* -------------------------------------------------
-   INPUT
-------------------------------------------------- */
+/* ================= INPUT ================= */
 $org_id    = (int)($_REQUEST['org_id'] ?? 0);
 $outlet_id = $_REQUEST['outlet_id'] ?? null;
 $date_from = $_REQUEST['date_from'] ?? null;
 $date_to   = $_REQUEST['date_to'] ?? null;
 $today     = isset($_GET['today']) && (int)$_GET['today'] === 1;
 
-/* -------------------------------------------------
-   ROLE RESTRICTION
-------------------------------------------------- */
+/* PAGINATION */
+$page   = max(1, (int)($_GET['page'] ?? 1));
+$limit  = min(50, max(1, (int)($_GET['limit'] ?? 10)));
+$offset = ($page - 1) * $limit;
+
+/* ================= ROLE ================= */
 if ($authUser['role'] === 'manager') {
     $org_id = $authUser['org_id'];
     if (!empty($outlet_id) && $outlet_id != $authUser['outlet_id']) {
-        sendError("Forbidden: cannot access other outlets", 403);
+        sendError("Forbidden", 403);
     }
     $outlet_id = $authUser['outlet_id'];
 }
 
 if ($org_id <= 0) sendError("org_id required", 422);
 
-/* -------------------------------------------------
-   WHERE CONDITIONS
-------------------------------------------------- */
+/* ================= WHERE ================= */
 $where = "s.org_id = :org_id";
 $params = [':org_id' => $org_id];
 
@@ -56,38 +53,39 @@ if ($outlet_id) {
     $params[':outlet_id'] = $outlet_id;
 }
 
-/* 🔥 TODAY FILTER (only if date range not provided) */
 if ($today && !$date_from && !$date_to) {
     $where .= " AND DATE(s.created_at) = CURDATE()";
 }
-
 if ($date_from) {
-    $where .= " AND DATE(s.created_at) >= :df";
-    $params[':df'] = $date_from;
+    $where .= " AND s.created_at >= :df";
+    $params[':df'] = $date_from . " 00:00:00";
 }
 if ($date_to) {
-    $where .= " AND DATE(s.created_at) <= :dt";
-    $params[':dt'] = $date_to;
+    $where .= " AND s.created_at <= :dt";
+    $params[':dt'] = $date_to . " 23:59:59";
 }
 
-/* -------------------------------------------------
-   SALES + COST (PURCHASE PRICE FROM META)
-------------------------------------------------- */
+/* ================= SALES + COST + DISCOUNT ================= */
 $stmt = $pdo->prepare("
     SELECT
         s.outlet_id,
         o.name AS outlet_name,
 
-        COALESCE(SUM(si.amount),0) AS sales_amount,
-        COALESCE(SUM(s.discount),0) AS discount,
+        COALESCE(SUM(
+            CASE WHEN s.status = 1 THEN si.amount ELSE 0 END
+        ),0) AS sales_amount,
+
+        COALESCE(SUM(pd.manual_discount),0) AS discount,
 
         COALESCE(SUM(
-            si.quantity *
-            COALESCE(
-                CAST(JSON_UNQUOTE(JSON_EXTRACT(v.meta,'$.purchase_price')) AS DECIMAL(10,2)),
-                CAST(JSON_UNQUOTE(JSON_EXTRACT(p.meta,'$.purchase_price')) AS DECIMAL(10,2)),
-                0
-            )
+            CASE WHEN s.status = 1 THEN
+                si.quantity *
+                COALESCE(
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(v.meta,'$.purchase_price')) AS DECIMAL(10,2)),
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(p.meta,'$.purchase_price')) AS DECIMAL(10,2)),
+                    0
+                )
+            ELSE 0 END
         ),0) AS cost_amount
 
     FROM sales s
@@ -95,78 +93,154 @@ $stmt = $pdo->prepare("
     JOIN outlets o ON o.id = s.outlet_id
     JOIN products p ON p.id = si.product_id
     LEFT JOIN product_variants v ON v.id = si.variant_id
+    LEFT JOIN (
+        SELECT
+            sale_id,
+            CAST(
+                JSON_UNQUOTE(
+                    JSON_EXTRACT(
+                        JSON_UNQUOTE(meta),
+                        '$.manual_discount'
+                    )
+                ) AS DECIMAL(10,2)
+            ) AS manual_discount
+        FROM payments
+        WHERE is_active = 1
+    ) pd ON pd.sale_id = s.id
 
     WHERE $where
     GROUP BY s.outlet_id, o.name
+    ORDER BY o.name
+    LIMIT $limit OFFSET $offset
 ");
 $stmt->execute($params);
-$salesRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$rowsRaw = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-/* -------------------------------------------------
-   COLLECTIONS
-------------------------------------------------- */
+/* ================= LOYALTY (SOURCE OF TRUTH) ================= */
 $stmt = $pdo->prepare("
     SELECT
         s.outlet_id,
-        COALESCE(SUM(pay.amount),0) AS collections
+        COALESCE(SUM(lp.points_redeemed),0) AS loyalty_redeemed
+    FROM loyalty_points lp
+    JOIN sales s ON s.id = lp.sale_id
+    WHERE $where
+    AND s.status = 1
+    GROUP BY s.outlet_id
+");
+$stmt->execute($params);
+
+$loyaltyMap = [];
+foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+    $loyaltyMap[$r['outlet_id']] = (float)$r['loyalty_redeemed'];
+}
+
+/* ================= COLLECTIONS + REFUNDS ================= */
+$stmt = $pdo->prepare("
+    SELECT
+        s.outlet_id,
+        SUM(CASE WHEN p.amount > 0 THEN p.amount ELSE 0 END) AS collections,
+        SUM(CASE WHEN p.amount < 0 THEN ABS(p.amount) ELSE 0 END) AS refunds,
+        COUNT(DISTINCT CASE WHEN p.amount < 0 THEN p.sale_id END) AS refund_count
     FROM sales s
-    LEFT JOIN payments pay ON pay.sale_id = s.id
+    LEFT JOIN payments p ON p.sale_id = s.id AND p.is_active = 1
     WHERE $where
     GROUP BY s.outlet_id
 ");
 $stmt->execute($params);
 
-$collectionsMap = [];
+$payMap = [];
 foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-    $collectionsMap[$r['outlet_id']] = (float)$r['collections'];
+    $payMap[$r['outlet_id']] = $r;
 }
 
-/* -------------------------------------------------
-   FINAL FORMAT
-------------------------------------------------- */
+/* ================= FORMAT ROWS ================= */
 $rows = [];
-foreach ($salesRows as $r) {
+foreach ($rowsRaw as $r) {
 
-    $sales      = (float)$r['sales_amount'];
-    $discount   = (float)$r['discount'];
-    $netSales   = $sales - $discount;
-    $cost       = (float)$r['cost_amount'];
-    $profit     = $netSales - $cost;
-    $collected  = $collectionsMap[$r['outlet_id']] ?? 0;
+    $oid      = $r['outlet_id'];
+    $collect  = (float)($payMap[$oid]['collections'] ?? 0);
+    $refund   = (float)($payMap[$oid]['refunds'] ?? 0);
+    $rCount   = (int)($payMap[$oid]['refund_count'] ?? 0);
+    $loyalty  = (float)($loyaltyMap[$oid] ?? 0);
+
+    $net_sales = max(
+        0,
+        $r['sales_amount'] - $r['discount'] - $loyalty
+    );
+
+    $outstanding = max(0, $net_sales - $collect);
 
     $rows[] = [
-        'outlet_id'     => (int)$r['outlet_id'],
-        'outlet_name'   => $r['outlet_name'],
+        'outlet_id'       => (int)$oid,
+        'outlet_name'     => $r['outlet_name'],
 
-        'sales_amount'  => $sales,
-        'discount'      => $discount,
-        'net_sales'     => $netSales,
+        'sales_amount'    => (float)$r['sales_amount'],
+        'discount'        => (float)$r['discount'],
+        'loyalty_redeemed'=> $loyalty,
 
-        'cost_amount'   => $cost,
-        'gross_profit'  => $profit,
+        'net_sales'       => round($net_sales, 2),
 
-        'collections'   => $collected,
-        'outstanding'   => $netSales - $collected
+        'cost_amount'     => (float)$r['cost_amount'],
+        'gross_profit'    => round($net_sales - $r['cost_amount'], 2),
+
+        'collections'     => $collect,
+        'refund_amount'   => $refund,
+        'refund_count'    => $rCount,
+
+        'outstanding'     => round($outstanding, 2)
     ];
 }
 
-/* -------------------------------------------------
-   TOTALS
-------------------------------------------------- */
+/* ================= TOTALS ================= */
 $totals = [
-    'sales_amount' => array_sum(array_column($rows, 'sales_amount')),
-    'discount'     => array_sum(array_column($rows, 'discount')),
-    'net_sales'    => array_sum(array_column($rows, 'net_sales')),
-    'cost_amount'  => array_sum(array_column($rows, 'cost_amount')),
-    'gross_profit' => array_sum(array_column($rows, 'gross_profit')),
-    'collections'  => array_sum(array_column($rows, 'collections')),
-    'outstanding'  => array_sum(array_column($rows, 'outstanding')),
+    'sales_amount'     => 0,
+    'discount'         => 0,
+    'loyalty_redeemed' => 0,
+    'net_sales'        => 0,
+    'cost_amount'      => 0,
+    'gross_profit'     => 0,
+    'collections'      => 0,
+    'refund_amount'    => 0,
+    'refund_count'     => 0,
+    'outstanding'      => 0
 ];
 
-/* -------------------------------------------------
-   RESPONSE
-------------------------------------------------- */
+foreach ($rows as $r) {
+    $totals['sales_amount']     += $r['sales_amount'];
+    $totals['discount']         += $r['discount'];
+    $totals['loyalty_redeemed'] += $r['loyalty_redeemed'];
+    $totals['cost_amount']      += $r['cost_amount'];
+    $totals['collections']      += $r['collections'];
+    $totals['refund_amount']    += $r['refund_amount'];
+    $totals['refund_count']     += $r['refund_count'];
+}
+
+$totals['net_sales']    = round(
+    $totals['sales_amount'] - $totals['discount'] - $totals['loyalty_redeemed'],
+    2
+);
+
+$totals['gross_profit'] = round(
+    $totals['net_sales'] - $totals['cost_amount'],
+    2
+);
+
+$totals['outstanding']  = round(
+    max(0, $totals['net_sales'] - $totals['collections']),
+    2
+);
+
+/* ================= RESPONSE ================= */
 sendSuccess("Profit & Loss Report", [
+    'filter' => [
+        'today'     => $today ? true : false,
+        'date_from' => $date_from,
+        'date_to'   => $date_to
+    ],
+    'pagination' => [
+        'page'  => $page,
+        'limit' => $limit
+    ],
     'rows'   => $rows,
     'totals' => $totals
 ]);

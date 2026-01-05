@@ -156,24 +156,26 @@ try {
     ------------------------- */
     $paymentModel = new Payment($pdo);
     $payment_id = $paymentModel->create([
-        'sale_id'      => $sale_id,
-        'org_id'       => $sale['org_id'],
-        'outlet_id'    => $sale['outlet_id'],
-        'amount'       => $final_amount,
-        'payment_mode' => $payment_mode,
-        'meta'         => json_encode([
-            'original_amount' => round($original_amount,2),
-            'manual_discount' => round($manual_discount,2),
-            'redeem_points'   => $redeem_points,
-            'redeem_value'    => round($redeem_value,2),
-            'gst_summary' => [
-                'cgst' => (float)$sale['cgst'],
-                'sgst' => (float)$sale['sgst'],
-                'igst' => (float)$sale['igst']
-            ],
-            'user_meta' => $meta_input
-        ], JSON_UNESCAPED_UNICODE)
-    ]);
+    'sale_id'      => $sale_id,
+    'org_id'       => $sale['org_id'],
+    'outlet_id'    => $sale['outlet_id'],
+    'amount'       => $final_amount,
+    'payment_mode' => $payment_mode,
+    'is_active'    => 1, // 🔥 IMPORTANT
+    'meta'         => json_encode([
+        'original_amount' => round($original_amount,2),
+        'manual_discount' => round($manual_discount,2),
+        'redeem_points'   => $redeem_points,
+        'redeem_value'    => round($redeem_value,2),
+        'gst_summary' => [
+            'cgst' => (float)$sale['cgst'],
+            'sgst' => (float)$sale['sgst'],
+            'igst' => (float)$sale['igst']
+        ],
+        'user_meta' => $meta_input
+    ], JSON_UNESCAPED_UNICODE)
+]);
+
 
     /* -------------------------
        LOYALTY LOG

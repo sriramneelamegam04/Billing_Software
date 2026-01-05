@@ -197,6 +197,19 @@ $final_total = round($grand_total);
 ================================================= */
 try {
     $pdo->beginTransaction();
+    
+    $pdo->prepare("
+    UPDATE sales 
+    SET status = 0 
+    WHERE id = ? AND org_id = ?
+")->execute([$sale_id, $authUser['org_id']]);
+// Invalidate previous payments for this sale
+$stmt = $pdo->prepare("
+    DELETE FROM payments
+    WHERE sale_id=? AND org_id=?
+");
+$stmt->execute([$sale_id, $authUser['org_id']]);
+
 
     (new SubscriptionService($pdo))
         ->checkActive($authUser['org_id']);
@@ -210,19 +223,48 @@ try {
         'igst'           => round($igst_total,2),
         'round_off'      => round($round_off,2),
         'total_amount'   => $final_total
+
+        
     ]);
 
     /* ---------- FETCH EXISTING LOYALTY ---------- */
-    $stmt = $pdo->prepare("
-        SELECT points_earned
-        FROM loyalty_points
-        WHERE sale_id=?
-        LIMIT 1
-    ");
-    $stmt->execute([$sale_id]);
-    $loyalty_earned = (float)$stmt->fetchColumn();
+   /* ---------- UPDATE / CREATE LOYALTY ---------- */
+$loyalty_earned = round($final_total / 100, 2);
 
-    $pdo->commit();
+$stmt = $pdo->prepare("
+    SELECT id FROM loyalty_points
+    WHERE sale_id=? AND org_id=?
+    LIMIT 1
+");
+$stmt->execute([$sale_id, $authUser['org_id']]);
+$lp_id = $stmt->fetchColumn();
+
+if ($lp_id) {
+    // update existing loyalty
+    $stmt = $pdo->prepare("
+        UPDATE loyalty_points
+        SET points_earned=?
+        WHERE id=?
+    ");
+    $stmt->execute([$loyalty_earned, $lp_id]);
+} else {
+    // create loyalty if missing
+    $stmt = $pdo->prepare("
+        INSERT INTO loyalty_points
+        (org_id,outlet_id,customer_id,sale_id,points_earned,points_redeemed)
+        VALUES (?,?,?,?,?,0)
+    ");
+    $stmt->execute([
+        $authUser['org_id'],
+        $outlet_id,
+        $customer_id,
+        $sale_id,
+        $loyalty_earned
+    ]);
+}
+
+$pdo->commit();
+
 
     /* =================================================
        RESPONSE (SAME FORMAT AS CREATE)

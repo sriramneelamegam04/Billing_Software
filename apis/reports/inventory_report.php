@@ -28,9 +28,15 @@ $date_from  = $_REQUEST['date_from'] ?? null;
 $date_to    = $_REQUEST['date_to'] ?? null;
 $today      = isset($_GET['today']) && (int)$_GET['today'] === 1;
 
+/* 🔥 PAGINATION */
+$page  = max(1, (int)($_GET['page'] ?? 1));
+$limit = min(100, max(1, (int)($_GET['limit'] ?? 20)));
+$offset = ($page - 1) * $limit;
+
 /* ================= ROLE RESTRICTION ================= */
 if ($authUser['role'] === 'manager') {
     $org_id = $authUser['org_id'];
+
     if (!empty($outlet_id) && $outlet_id != $authUser['outlet_id']) {
         sendError("Forbidden: cannot access other outlets", 403);
     }
@@ -41,7 +47,7 @@ if ($org_id <= 0) sendError("org_id required", 422);
 
 try {
 
-    /* ================= WHERE CONDITIONS ================= */
+    /* ================= WHERE ================= */
     $whereProd  = "p.org_id = :org_id";
     $whereSales = "s.org_id = :org_id";
 
@@ -55,8 +61,8 @@ try {
         $paramsSales[':outlet_id'] = $outlet_id;
     }
 
-    /* 🔥 TODAY FILTER */
-    if ($today) {
+    /* 🔥 DATE FILTER */
+    if ($today && !$date_from && !$date_to) {
         $whereSales .= " AND DATE(s.created_at) = CURDATE()";
     } else {
         if ($date_from) {
@@ -69,20 +75,31 @@ try {
         }
     }
 
-    /* ================= PRODUCTS ================= */
-    $stmt = $pdo->prepare("
-        SELECT 
-            p.id,
-            p.name,
-            p.category,
-            p.price,
-            o.name AS outlet_name
-        FROM products p
-        JOIN outlets o ON o.id = p.outlet_id
-        WHERE $whereProd
-    ");
-    $stmt->execute($paramsProd);
-    $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    /* ================= PRODUCTS (PAGINATED) ================= */
+   $stmt = $pdo->prepare("
+    SELECT 
+        p.id,
+        p.name,
+        c.name AS category_name,
+        p.price,
+        o.name AS outlet_name
+    FROM products p
+    JOIN outlets o ON o.id = p.outlet_id
+    LEFT JOIN categories c ON c.id = p.category_id
+    WHERE $whereProd
+    ORDER BY p.id
+    LIMIT :limit OFFSET :offset
+");
+
+foreach ($paramsProd as $k => $v) {
+    $stmt->bindValue($k, $v);
+}
+$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+$stmt->execute();
+
+$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 
     /* ================= SALES AGGREGATION ================= */
     $stmt = $pdo->prepare("
@@ -98,22 +115,54 @@ try {
     $stmt->execute($paramsSales);
     $salesMap = $stmt->fetchAll(PDO::FETCH_UNIQUE);
 
-    /* ================= MERGE DATA ================= */
+    /* ================= MERGE ================= */
     foreach ($products as &$p) {
         $r = $salesMap[$p['id']] ?? ['sold_qty' => 0, 'sold_value' => 0];
         $p['sold_qty']   = (int)$r['sold_qty'];
         $p['sold_value'] = (float)$r['sold_value'];
     }
+    unset($p);
 
-    /* ================= TOTALS ================= */
+    /* ================= TOTAL COUNT ================= */
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) 
+        FROM products p
+        WHERE $whereProd
+    ");
+    $stmt->execute($paramsProd);
+    $total_products = (int)$stmt->fetchColumn();
+
+    /* ================= TOTALS (FULL DATASET) ================= */
+    $stmt = $pdo->prepare("
+        SELECT
+            COALESCE(SUM(si.quantity),0) AS sold_qty,
+            COALESCE(SUM(si.amount),0)   AS sold_value
+        FROM sales s
+        JOIN sale_items si ON si.sale_id = s.id
+        WHERE $whereSales
+    ");
+    $stmt->execute($paramsSales);
+    $tot = $stmt->fetch(PDO::FETCH_ASSOC);
+
     $totals = [
-        'products'   => count($products),
-        'sold_qty'   => array_sum(array_column($products, 'sold_qty')),
-        'sold_value' => array_sum(array_column($products, 'sold_value'))
+        'products'   => $total_products,
+        'sold_qty'   => (int)$tot['sold_qty'],
+        'sold_value' => (float)$tot['sold_value']
     ];
 
     /* ================= RESPONSE ================= */
     sendSuccess("Inventory report", [
+        'filters' => [
+            'today'     => $today ? true : false,
+            'date_from' => $date_from,
+            'date_to'   => $date_to
+        ],
+        'pagination' => [
+            'page'       => $page,
+            'limit'      => $limit,
+            'total_rows' => $total_products,
+            'total_pages'=> ceil($total_products / $limit)
+        ],
         'rows'   => $products,
         'totals' => $totals
     ]);

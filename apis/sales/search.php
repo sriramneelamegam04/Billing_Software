@@ -17,9 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendError("Method Not Allowed", 405);
 }
 
-/* -------------------------------------------------
-   AUTH + SUBSCRIPTION
-------------------------------------------------- */
+/* ================= AUTH + SUBSCRIPTION ================= */
 $authUser = getCurrentUser();
 if (!$authUser) sendError("Unauthorized", 401);
 
@@ -28,9 +26,7 @@ if (!$subscriptionModel->getActive($authUser['org_id'])) {
     sendError("Active subscription required", 403);
 }
 
-/* -------------------------------------------------
-   INPUT
-------------------------------------------------- */
+/* ================= INPUT ================= */
 $outlet_id   = (int)($_GET['outlet_id'] ?? 0);
 $q           = trim($_GET['q'] ?? '');
 $customer_id = isset($_GET['customer_id']) ? (int)$_GET['customer_id'] : null;
@@ -48,19 +44,12 @@ $sort_order = (isset($_GET['sort_order']) && strtolower($_GET['sort_order']) ===
 
 if (!$outlet_id) sendError("outlet_id is required", 422);
 
-/* -------------------------------------------------
-   VALIDATE OUTLET
-------------------------------------------------- */
-$stmt = $pdo->prepare("
-    SELECT id FROM outlets
-    WHERE id=? AND org_id=?
-");
+/* ================= VALIDATE OUTLET ================= */
+$stmt = $pdo->prepare("SELECT id FROM outlets WHERE id=? AND org_id=?");
 $stmt->execute([$outlet_id, $authUser['org_id']]);
 if (!$stmt->fetch()) sendError("Invalid outlet_id", 403);
 
-/* -------------------------------------------------
-   BASE QUERY
-------------------------------------------------- */
+/* ================= BASE QUERY ================= */
 $sql = "
 SELECT
     s.id              AS sale_id,
@@ -78,29 +67,49 @@ SELECT
     s.status          AS sale_status,
     s.created_at,
 
-    p.payment_mode
+    pay.payment_id,
+    pay.payment_mode
 
 FROM sales s
-LEFT JOIN customers c ON c.id = s.customer_id
-LEFT JOIN payments p ON p.sale_id = s.id
+
+LEFT JOIN customers c 
+    ON c.id = s.customer_id
+
+/* 🔥 Latest ACTIVE payment per sale */
+LEFT JOIN (
+    SELECT
+        p1.id AS payment_id,
+        p1.sale_id,
+        p1.payment_mode
+    FROM payments p1
+    WHERE p1.is_active = 1
+    AND p1.id = (
+        SELECT MAX(p2.id)
+        FROM payments p2
+        WHERE p2.sale_id = p1.sale_id
+        AND p2.is_active = 1
+    )
+) pay ON pay.sale_id = s.id
 
 WHERE s.org_id = ? AND s.outlet_id = ?
 ";
 
 $params = [$authUser['org_id'], $outlet_id];
 
-/* -------------------------------------------------
-   FILTERS
-------------------------------------------------- */
+/* ================= SEARCH FILTER ================= */
 if ($q !== '') {
-    if (is_numeric($q)) {
-        $sql .= " AND (s.id = ? OR s.invoice_no LIKE ?)";
-        $params[] = (int)$q;
-        $params[] = "%$q%";
-    } else {
-        $sql .= " AND s.invoice_no LIKE ?";
-        $params[] = "%$q%";
-    }
+    $sql .= "
+        AND (
+            s.invoice_no LIKE ?
+            OR s.id = ?
+            OR c.name LIKE ?
+            OR c.phone LIKE ?
+        )
+    ";
+    $params[] = "%$q%";
+    $params[] = (int)$q;
+    $params[] = "%$q%";
+    $params[] = "%$q%";
 }
 
 if ($customer_id) {
@@ -108,7 +117,7 @@ if ($customer_id) {
     $params[] = $customer_id;
 }
 
-/* 🔥 TODAY FILTER (only if start/end not provided) */
+/* 🔥 TODAY FILTER */
 if ($today && !$start_date && !$end_date) {
     $sql .= " AND DATE(s.created_at) = CURDATE()";
 }
@@ -123,37 +132,37 @@ if ($end_date) {
     $params[] = $end_date;
 }
 
-/* -------------------------------------------------
-   ORDER + PAGINATION
-------------------------------------------------- */
+/* ================= ORDER + PAGINATION ================= */
 $sql .= " ORDER BY s.id $sort_order LIMIT $limit OFFSET $offset";
 
-/* -------------------------------------------------
-   FETCH SALES
-------------------------------------------------- */
+/* ================= FETCH DATA ================= */
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-/* -------------------------------------------------
-   TOTAL COUNT
-------------------------------------------------- */
+/* ================= COUNT QUERY ================= */
 $countSql = "
 SELECT COUNT(*)
 FROM sales s
+LEFT JOIN customers c ON c.id = s.customer_id
 WHERE s.org_id=? AND s.outlet_id=?
 ";
+
 $countParams = [$authUser['org_id'], $outlet_id];
 
 if ($q !== '') {
-    if (is_numeric($q)) {
-        $countSql .= " AND (s.id = ? OR s.invoice_no LIKE ?)";
-        $countParams[] = (int)$q;
-        $countParams[] = "%$q%";
-    } else {
-        $countSql .= " AND s.invoice_no LIKE ?";
-        $countParams[] = "%$q%";
-    }
+    $countSql .= "
+        AND (
+            s.invoice_no LIKE ?
+            OR s.id = ?
+            OR c.name LIKE ?
+            OR c.phone LIKE ?
+        )
+    ";
+    $countParams[] = "%$q%";
+    $countParams[] = (int)$q;
+    $countParams[] = "%$q%";
+    $countParams[] = "%$q%";
 }
 
 if ($customer_id) {
@@ -179,13 +188,10 @@ $stmt = $pdo->prepare($countSql);
 $stmt->execute($countParams);
 $total = (int)$stmt->fetchColumn();
 
-/* -------------------------------------------------
-   RESPONSE
-------------------------------------------------- */
+/* ================= RESPONSE ================= */
 sendSuccess([
     "records" => array_map(function ($r) {
 
-        /* 🔥 SALE vs RETURN IDENTIFICATION */
         $saleType = "SALE";
         $paymentStatus = "UNPAID";
 
@@ -200,7 +206,7 @@ sendSuccess([
             "sale_id"    => (int)$r['sale_id'],
             "invoice_no" => $r['invoice_no'],
 
-            "sale_type"  => $saleType,   // 🔥 NEW FIELD
+            "sale_type"  => $saleType,
 
             "customer" => [
                 "id"    => (int)$r['customer_id'],
@@ -216,6 +222,7 @@ sendSuccess([
             "total_amount"   => (float)$r['total_amount'],
 
             "payment_status" => $paymentStatus,
+            "payment_id"     => $r['payment_id'] ? (int)$r['payment_id'] : null,
             "payment_mode"   => $r['payment_mode'],
 
             "created_at"     => $r['created_at']

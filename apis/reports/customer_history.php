@@ -33,6 +33,11 @@ $date_from   = $_GET['date_from'] ?? null;
 $date_to     = $_GET['date_to'] ?? null;
 $today       = isset($_GET['today']) && (int)$_GET['today'] === 1;
 
+/* 🔥 PAGINATION */
+$page  = max(1, (int)($_GET['page'] ?? 1));
+$limit = min(50, max(1, (int)($_GET['limit'] ?? 10)));
+$offset = ($page - 1) * $limit;
+
 if (!$customer_id) sendError("customer_id is required", 422);
 
 /* ================= VALIDATE CUSTOMER ================= */
@@ -58,7 +63,7 @@ if ($outlet_id) {
     $params[':outlet_id'] = $outlet_id;
 }
 
-/* 🔥 TODAY FILTER (priority only if no date range) */
+/* 🔥 TODAY FILTER (priority if no date range) */
 if ($today && !$date_from && !$date_to) {
     $where .= " AND DATE(s.created_at) = CURDATE()";
 }
@@ -72,7 +77,15 @@ if ($date_to) {
     $params[':dt'] = $date_to;
 }
 
-/* ================= TRANSACTIONS ================= */
+/* ================= TOTAL COUNT ================= */
+$stmt = $pdo->prepare("
+    SELECT COUNT(*) FROM sales s
+    WHERE $where
+");
+$stmt->execute($params);
+$total_rows = (int)$stmt->fetchColumn();
+
+/* ================= TRANSACTIONS (PAGINATED) ================= */
 $stmt = $pdo->prepare("
     SELECT
         s.id,
@@ -85,41 +98,48 @@ $stmt = $pdo->prepare("
             WHEN s.total_amount < 0 THEN 'RETURN'
             ELSE 'SALE'
         END AS type,
-        p.amount AS paid_amount,
+        COALESCE(p.amount,0) AS paid_amount,
         p.payment_mode
     FROM sales s
-    LEFT JOIN payments p ON p.sale_id = s.id
+    LEFT JOIN payments p 
+        ON p.sale_id = s.id 
+       AND p.is_active = 1
     WHERE $where
     ORDER BY s.created_at DESC
+    LIMIT $limit OFFSET $offset
 ");
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-/* ================= AGGREGATION ================= */
-$summary = [
-    'sale_bills'   => 0,
-    'return_bills' => 0,
-    'sale_total'   => 0,
-    'return_total' => 0,
-    'collections'  => 0
-];
+/* ================= FULL SUMMARY (NO PAGINATION) ================= */
+$stmt = $pdo->prepare("
+    SELECT
+        SUM(CASE WHEN s.total_amount >= 0 THEN 1 ELSE 0 END) AS sale_bills,
+        SUM(CASE WHEN s.total_amount < 0 THEN 1 ELSE 0 END)  AS return_bills,
+        SUM(CASE WHEN s.total_amount >= 0 THEN s.total_amount ELSE 0 END) AS sale_total,
+        SUM(CASE WHEN s.total_amount < 0 THEN ABS(s.total_amount) ELSE 0 END) AS return_total,
+        COALESCE(SUM(p.amount),0) AS collections
+    FROM sales s
+    LEFT JOIN payments p 
+        ON p.sale_id = s.id 
+       AND p.is_active = 1
+    WHERE $where
+");
+$stmt->execute($params);
+$sum = $stmt->fetch(PDO::FETCH_ASSOC);
 
-foreach ($rows as $r) {
-    if ($r['type'] === 'SALE') {
-        $summary['sale_bills']++;
-        $summary['sale_total'] += (float)$r['total_amount'];
-    } else {
-        $summary['return_bills']++;
-        $summary['return_total'] += abs((float)$r['total_amount']);
-    }
-    $summary['collections'] += (float)($r['paid_amount'] ?? 0);
-}
-
-$net_amount  = $summary['sale_total'] - $summary['return_total'];
-$outstanding = $net_amount - $summary['collections'];
+$net_amount  = (float)$sum['sale_total'] - (float)$sum['return_total'];
+$outstanding = $net_amount - (float)$sum['collections'];
 
 /* ================= RESPONSE ================= */
 sendSuccess([
+    "pagination" => [
+        "page"       => $page,
+        "limit"      => $limit,
+        "total_rows" => $total_rows,
+        "total_pages"=> ceil($total_rows / $limit)
+    ],
+
     "filter" => [
         "today"      => $today ? true : false,
         "date_from"  => $date_from,
@@ -134,12 +154,12 @@ sendSuccess([
     ],
 
     "summary" => [
-        "sale_bills"   => $summary['sale_bills'],
-        "return_bills" => $summary['return_bills'],
-        "sale_total"   => round($summary['sale_total'],2),
-        "return_total" => round($summary['return_total'],2),
+        "sale_bills"   => (int)$sum['sale_bills'],
+        "return_bills" => (int)$sum['return_bills'],
+        "sale_total"   => round($sum['sale_total'],2),
+        "return_total" => round($sum['return_total'],2),
         "net_amount"   => round($net_amount,2),
-        "collections"  => round($summary['collections'],2),
+        "collections"  => round($sum['collections'],2),
         "outstanding"  => round($outstanding,2)
     ],
 
@@ -147,9 +167,9 @@ sendSuccess([
         return [
             "sale_id"      => (int)$r['id'],
             "invoice_no"   => $r['invoice_no'],
-            "type"         => $r['type'],   // SALE / RETURN
+            "type"         => $r['type'],
             "total_amount" => (float)$r['total_amount'],
-            "paid_amount"  => (float)($r['paid_amount'] ?? 0),
+            "paid_amount"  => (float)$r['paid_amount'],
             "payment_mode" => $r['payment_mode'],
             "note"         => $r['note'],
             "created_at"   => $r['created_at']

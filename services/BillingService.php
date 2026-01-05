@@ -161,60 +161,101 @@ return [
         ];
     }
 
-    /* ==========================================================
-       UPDATE SALE (PALAYA FLOW SAME + GST FIELDS)
-    ========================================================== */
-    public function updateSale($org_id, $sale_id, $oldSale, $data)
-    {
-        $pdo = $this->pdo;
+   /* ==========================================================
+   UPDATE SALE (FULLY FIXED – MATCHES createSale)
+========================================================== */
+public function updateSale($org_id, $sale_id, $oldSale, $data)
+{
+    $pdo = $this->pdo;
 
-        if (!isset($data['items'])) {
-            $skip = ['items'];
-            $updates = [];
-            $params  = [];
+    /* ======================================================
+       1️⃣ UPDATE SALES HEADER (ALWAYS)
+    ====================================================== */
+    $headerFields = [
+        'taxable_amount',
+        'cgst',
+        'sgst',
+        'igst',
+        'round_off',
+        'total_amount',
+        'discount',
+        'status',
+        'note'
+    ];
 
-            foreach ($data as $k => $v) {
-                if (in_array($k, $skip, true)) continue;
-                $updates[] = "$k=?";
-                $params[]  = $v;
-            }
+    $updates = [];
+    $params  = [];
 
-            if ($updates) {
-                $params[] = $sale_id;
-                $params[] = $org_id;
-                $stmt = $pdo->prepare(
-                    "UPDATE sales SET ".implode(',', $updates)." WHERE id=? AND org_id=?"
-                );
-                $stmt->execute($params);
-            }
-            return true;
+    foreach ($headerFields as $field) {
+        if (array_key_exists($field, $data)) {
+            $updates[] = "{$field} = ?";
+            $params[]  = $data[$field];
         }
+    }
 
-        // Delete old items
-        $stmt = $pdo->prepare("DELETE FROM sale_items WHERE sale_id=?");
-        $stmt->execute([$sale_id]);
+    if (!empty($updates)) {
+        $params[] = $sale_id;
+        $params[] = $org_id;
 
-        // Insert new items
-        foreach ($data['items'] as $item) {
-            $this->saleItemModel->create([
-                'sale_id'        => $sale_id,
-                'product_id'     => (int)$item['product_id'],
-                'variant_id'     => $item['variant_id'] ?? null,
-                'quantity'       => $item['quantity'],
-                'rate'           => $item['rate'],
-                'taxable_amount' => $item['taxable_amount'],
-                'gst_rate'       => $item['gst_rate'],
-                'cgst'           => $item['cgst'],
-                'sgst'           => $item['sgst'],
-                'igst'           => $item['igst'],
-                'gst_amount'     => $item['gst_amount'],
-                'total_amount'   => $item['total_amount'],
-                'meta'           => $item['meta'] ?? null
-            ]);
-        }
+        $stmt = $pdo->prepare(
+            "UPDATE sales 
+             SET " . implode(', ', $updates) . " 
+             WHERE id = ? AND org_id = ?"
+        );
+        $stmt->execute($params);
+    }
 
+    /* ======================================================
+       2️⃣ IF NO ITEMS → HEADER UPDATE ONLY
+    ====================================================== */
+    if (!isset($data['items'])) {
         return true;
     }
+
+    /* ======================================================
+       3️⃣ DELETE OLD ITEMS
+    ====================================================== */
+    $stmt = $pdo->prepare("DELETE FROM sale_items WHERE sale_id = ?");
+    $stmt->execute([$sale_id]);
+
+    /* ======================================================
+       4️⃣ INSERT UPDATED ITEMS (MATCH createSale)
+    ====================================================== */
+    foreach ($data['items'] as $item) {
+
+        $lineAmount =
+            $item['amount']
+            ?? (
+                ($item['taxable_amount'] ?? 0)
+                + ($item['cgst'] ?? 0)
+                + ($item['sgst'] ?? 0)
+                + ($item['igst'] ?? 0)
+            );
+
+        $this->saleItemModel->create([
+            'sale_id'        => $sale_id,
+            'product_id'     => (int)$item['product_id'],
+            'variant_id'     => $item['variant_id'] ?? null,
+            'quantity'       => (float)$item['quantity'],
+            'rate'           => (float)$item['rate'],
+
+            // GST STRUCTURE
+            'taxable_amount' => $item['taxable_amount'] ?? 0,
+            'gst_rate'       => $item['gst_rate'] ?? 0,
+            'cgst'           => $item['cgst'] ?? 0,
+            'sgst'           => $item['sgst'] ?? 0,
+            'igst'           => $item['igst'] ?? 0,
+
+            // FINAL GST INCLUDED AMOUNT
+            'amount'         => round($lineAmount, 2),
+
+            'meta'           => $item['meta'] ?? null
+        ]);
+    }
+
+    return true;
+}
+
 
     public function listSales($org_id) {
         return $this->saleModel->list($org_id);

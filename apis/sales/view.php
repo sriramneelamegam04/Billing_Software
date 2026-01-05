@@ -13,14 +13,11 @@ if ($_SERVER['REQUEST_METHOD'] === "OPTIONS") {
     http_response_code(200);
     exit;
 }
-
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendError("Method Not Allowed. Use GET", 405);
 }
 
-/* -------------------------------------------------
-   AUTH + SUBSCRIPTION
-------------------------------------------------- */
+/* ================= AUTH + SUBSCRIPTION ================= */
 $authUser = getCurrentUser();
 if (!$authUser) sendError("Unauthorized", 401);
 
@@ -29,9 +26,7 @@ if (!$subscriptionModel->getActive($authUser['org_id'])) {
     sendError("Active subscription required", 403);
 }
 
-/* -------------------------------------------------
-   INPUT
-------------------------------------------------- */
+/* ================= INPUT ================= */
 $sale_id    = isset($_GET['id']) ? (int)$_GET['id'] : null;
 $invoice_no = isset($_GET['invoice_no']) ? trim($_GET['invoice_no']) : null;
 
@@ -39,26 +34,30 @@ if (!$sale_id && !$invoice_no) {
     sendError("Either sale id or invoice_no is required", 422);
 }
 
-/* -------------------------------------------------
-   FETCH SALE (ROLE SAFE)
-------------------------------------------------- */
+/* ================= FETCH SALE ================= */
 $sql = "
-    SELECT
-        s.id,
-        s.invoice_no,
-        s.outlet_id,
-        s.customer_id,
-        s.taxable_amount,
-        s.cgst,
-        s.sgst,
-        s.igst,
-        s.round_off,
-        s.total_amount,
-        s.meta,
-        s.created_at
-    FROM sales s
-    INNER JOIN outlets o ON o.id = s.outlet_id
-    WHERE o.org_id = ?
+SELECT
+    s.id,
+    s.invoice_no,
+    s.outlet_id,
+    s.customer_id,
+    s.taxable_amount,
+    s.cgst,
+    s.sgst,
+    s.igst,
+    s.round_off,
+    s.total_amount,
+    s.meta,
+    s.status,
+    s.created_at,
+
+    c.name  AS customer_name,
+    c.phone AS customer_phone
+
+FROM sales s
+JOIN outlets o ON o.id = s.outlet_id
+LEFT JOIN customers c ON c.id = s.customer_id
+WHERE o.org_id = ?
 ";
 
 $params = [$authUser['org_id']];
@@ -82,19 +81,15 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $sale = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$sale) {
-    sendError("Sale not found", 404);
-}
+if (!$sale) sendError("Sale not found", 404);
 
-/* -------------------------------------------------
-   FETCH SALE ITEMS (BASE)
-------------------------------------------------- */
+/* ================= SALE ITEMS ================= */
 $stmt = $pdo->prepare("
     SELECT
         si.product_id,
         si.variant_id,
-        p.name  AS product_name,
-        v.name  AS variant_name,
+        p.name AS product_name,
+        v.name AS variant_name,
         si.quantity,
         si.rate,
         si.gst_rate,
@@ -111,78 +106,67 @@ $stmt = $pdo->prepare("
 $stmt->execute([$sale['id']]);
 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-/* -------------------------------------------------
-   META (DISCOUNT SNAPSHOT)
-------------------------------------------------- */
-$meta = json_decode($sale['meta'], true) ?: [];
-$itemMetaMap = [];
-
-if (!empty($meta['items_summary'])) {
-    foreach ($meta['items_summary'] as $m) {
-        $key = $m['product_id'].'_'.$m['variant_id'];
-        $itemMetaMap[$key] = $m;
-    }
-}
-
-/* -------------------------------------------------
-   LOYALTY POINTS
-------------------------------------------------- */
+/* ================= LATEST ACTIVE PAYMENT ================= */
 $stmt = $pdo->prepare("
-    SELECT points_earned
-    FROM loyalty_points
-    WHERE sale_id = ?
+    SELECT
+        p.id AS payment_id,
+        p.amount,
+        p.payment_mode,
+        p.meta
+    FROM payments p
+    WHERE p.sale_id = ?
+      AND p.is_active = 1
+    ORDER BY p.id DESC
     LIMIT 1
 ");
 $stmt->execute([$sale['id']]);
-$loyalty_earned = (float)$stmt->fetchColumn();
+$payment = $stmt->fetch(PDO::FETCH_ASSOC);
 
-/* -------------------------------------------------
-   FORMAT ITEMS + DISCOUNT
-------------------------------------------------- */
-$discount_total = 0;
+$paymentMeta = [];
+if ($payment && !empty($payment['meta'])) {
+    $paymentMeta = json_decode($payment['meta'], true) ?: [];
+}
 
-$formattedItems = array_map(function ($i) use (&$discount_total, $itemMetaMap) {
+/* ================= DISCOUNT + LOYALTY ================= */
+$manual_discount = (float)($paymentMeta['manual_discount'] ?? 0);
+$redeem_points   = (float)($paymentMeta['redeem_points'] ?? 0);
+$redeem_value    = (float)($paymentMeta['redeem_value'] ?? 0);
 
-    $key = $i['product_id'].'_'.$i['variant_id'];
-    $meta = $itemMetaMap[$key] ?? [];
-
-    $discount_amount = (float)($meta['discount_amount'] ?? 0);
-    $discount_total += $discount_amount * (float)$i['quantity'];
-
+/* ================= FORMAT ITEMS ================= */
+$formattedItems = array_map(function ($i) {
     return [
-        "product_id"       => (int)$i['product_id'],
-        "variant_id"       => $i['variant_id'] ? (int)$i['variant_id'] : null,
-        "product_name"     => $i['product_name'],
-        "variant_name"     => $i['variant_name'],
-        "quantity"         => (float)$i['quantity'],
-
-        "original_rate"    => (float)($meta['original_rate'] ?? $i['rate']),
-        "discount"         => $meta['discount'] ?? null,
-        "discount_amount"  => $discount_amount,
-
-        "final_rate"       => (float)$i['rate'],
-        "taxable_amount"   => (float)$i['taxable_amount'],
-
-        "gst_rate"         => (float)$i['gst_rate'],
-        "cgst"             => (float)$i['cgst'],
-        "sgst"             => (float)$i['sgst'],
-        "igst"             => (float)$i['igst'],
-
-        "line_total"       => (float)$i['amount']
+        "product_id"     => (int)$i['product_id'],
+        "variant_id"     => $i['variant_id'] ? (int)$i['variant_id'] : null,
+        "product_name"   => $i['product_name'],
+        "variant_name"   => $i['variant_name'],
+        "quantity"       => (float)$i['quantity'],
+        "rate"           => (float)$i['rate'],
+        "gst_rate"       => (float)$i['gst_rate'],
+        "taxable_amount" => (float)$i['taxable_amount'],
+        "cgst"           => (float)$i['cgst'],
+        "sgst"           => (float)$i['sgst'],
+        "igst"           => (float)$i['igst'],
+        "line_total"     => (float)$i['amount']
     ];
 }, $items);
 
-/* -------------------------------------------------
-   RESPONSE
-------------------------------------------------- */
+/* ================= RESPONSE ================= */
 sendSuccess([
     "sale" => [
         "sale_id"        => (int)$sale['id'],
         "invoice_no"     => $sale['invoice_no'],
-        "outlet_id"      => (int)$sale['outlet_id'],
-        "customer_id"    => (int)$sale['customer_id'],
+        "status"         => ((int)$sale['status'] === 1 ? "PAID" : "UNPAID"),
+
+        "customer" => [
+            "id"    => (int)$sale['customer_id'],
+            "name"  => $sale['customer_name'] ?: "Walk-in Customer",
+            "phone" => $sale['customer_phone'] ?: "-"
+        ],
+
         "taxable_amount" => (float)$sale['taxable_amount'],
-        "discount_total" => round($discount_total, 2),
+        "manual_discount"=> round($manual_discount,2),
+        "redeem_value"   => round($redeem_value,2),
+
         "cgst"           => (float)$sale['cgst'],
         "sgst"           => (float)$sale['sgst'],
         "igst"           => (float)$sale['igst'],
@@ -190,10 +174,18 @@ sendSuccess([
         "grand_total"    => (float)$sale['total_amount'],
         "created_at"     => $sale['created_at']
     ],
+
+    "payment" => $payment ? [
+        "payment_id"   => (int)$payment['payment_id'],
+        "payment_mode" => $payment['payment_mode'],
+        "paid_amount"  => (float)$payment['amount']
+    ] : null,
+
     "items" => $formattedItems,
+
     "loyalty" => [
-        "points_earned" => $loyalty_earned,
-        "basis"         => "1 point per ₹100",
-        "sale_id"       => (int)$sale['id']
+        "redeemed_points" => $redeem_points,
+        "redeem_value"    => $redeem_value
     ]
+
 ], "Sale fetched successfully");

@@ -97,6 +97,47 @@ foreach ($items as $r) {
     ];
 }
 
+
+
+/* ================= PREVENT DUPLICATE RETURNS ================= */
+foreach ($resolved as $r) {
+
+    $product_id = $r['sale_item']['product_id'];
+
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM sales rs
+        JOIN sale_items rsi ON rsi.sale_id = rs.id
+        WHERE
+            rs.org_id = ?
+            AND rs.status = 2              -- RETURN SALE
+            AND rs.note IS NOT NULL
+            AND rs.id IN (
+                SELECT id FROM sales
+                WHERE customer_id = ?
+                  AND outlet_id = ?
+                  AND created_at >= ?
+            )
+            AND rsi.product_id = ?
+    ");
+
+    $stmt->execute([
+        $sale['org_id'],
+        $sale['customer_id'],
+        $sale['outlet_id'],
+        $sale['created_at'],   // ensures related to this sale timeline
+        $product_id
+    ]);
+
+    if ((int)$stmt->fetchColumn() > 0) {
+        sendError(
+            "Product '{$r['sale_item']['product_name']}' already returned for this sale",
+            409
+        );
+    }
+}
+
+
 /* ================= TRANSACTION ================= */
 try {
     $pdo->beginTransaction();
@@ -119,14 +160,38 @@ try {
 
     $refund_total = 0;
 
+    /* ===== FETCH ACTUAL COLLECTED AMOUNT (SOURCE OF TRUTH) ===== */
+$stmt = $pdo->prepare("
+    SELECT COALESCE(SUM(amount),0)
+    FROM payments
+    WHERE sale_id = ?
+      AND is_active = 1
+      AND amount > 0
+");
+$stmt->execute([$sale_id]);
+$collected_amount = (float)$stmt->fetchColumn();
+
+/* ===== TOTAL SOLD QTY ===== */
+$total_sold_qty = 0;
+foreach ($saleItems as $x) {
+    $total_sold_qty += $x['quantity'];
+}
+
+if ($total_sold_qty <= 0) {
+    throw new Exception("Invalid sold quantity");
+}
+
+
     foreach ($resolved as $r) {
 
         $si  = $r['sale_item'];
         $qty = $r['qty'];
 
-        $unit_price  = $si['amount'] / $si['quantity'];
-        $line_refund = round($unit_price * $qty, 2);
-        $refund_total += $line_refund;
+     // ===== CORRECT REFUND CALCULATION (COLLECTION BASED) =====
+$per_unit_value = $collected_amount / $total_sold_qty;
+$line_refund = round($per_unit_value * $qty, 2);
+$refund_total += $line_refund;
+
 
         /* ---------- RETURN SALE ITEM ---------- */
         $stmt = $pdo->prepare("
@@ -143,37 +208,9 @@ try {
             -$line_refund
         ]);
 
-        /* ---------- INVENTORY ADD BACK ---------- */
-        $stmt = $pdo->prepare("
-            UPDATE inventory
-            SET quantity = quantity + ?
-            WHERE org_id=? AND outlet_id=? AND product_id=?
-              AND ((variant_id IS NULL AND ? IS NULL) OR variant_id=?)
-        ");
-        $stmt->execute([
-            $qty,
-            $sale['org_id'],
-            $sale['outlet_id'],
-            $si['product_id'],
-            $si['variant_id'],
-            $si['variant_id']
-        ]);
 
-        /* ---------- INVENTORY LOG ---------- */
-        $stmt = $pdo->prepare("
-            INSERT INTO inventory_logs
-            (org_id,outlet_id,product_id,variant_id,change_type,quantity_change,reference_id,created_at)
-            VALUES (?,?,?,?,?,?,?,NOW())
-        ");
-        $stmt->execute([
-            $sale['org_id'],
-            $sale['outlet_id'],
-            $si['product_id'],
-            $si['variant_id'],
-            'manual_adjustment',
-            $qty,
-            $return_sale_id
-        ]);
+
+
     }
 
     /* ---------- UPDATE RETURN TOTAL ---------- */
@@ -184,29 +221,51 @@ try {
         $return_sale_id
     ]);
 
-    /* ---------- LOYALTY REVERSE ---------- */
-    $stmt = $pdo->prepare("
-        SELECT points_earned FROM loyalty_points
-        WHERE sale_id=? AND org_id=?
-        LIMIT 1
-    ");
-    $stmt->execute([$sale_id,$sale['org_id']]);
-    $earned = (float)$stmt->fetchColumn();
+    /* ---------- CREATE REFUND PAYMENT (🔥 REQUIRED) ---------- */
+$stmt = $pdo->prepare("
+    INSERT INTO payments
+    (sale_id, org_id, outlet_id, amount, payment_mode, is_active, created_at)
+    VALUES
+    (:sale_id, :org_id, :outlet_id, :amount, :mode, 1, NOW())
+");
 
-    if ($earned > 0) {
-        $stmt = $pdo->prepare("
-            INSERT INTO loyalty_points
-            (org_id,outlet_id,customer_id,sale_id,points_earned,points_redeemed)
-            VALUES (?,?,?,?,0,?)
-        ");
-        $stmt->execute([
-            $sale['org_id'],
-            $sale['outlet_id'],
-            $sale['customer_id'],
-            $return_sale_id,
-            $earned
-        ]);
-    }
+$stmt->execute([
+    ':sale_id'   => $return_sale_id,
+    ':org_id'    => $sale['org_id'],
+    ':outlet_id' => $sale['outlet_id'],
+    ':amount'    => -round($refund_total, 2), // 🔴 NEGATIVE AMOUNT
+    ':mode'      => 'cash' // or from input if needed
+]);
+
+
+    /* ---------- LOYALTY REVERSE ---------- */
+    /* ---------- LOYALTY EARN REVERSE (CORRECT) ---------- */
+$stmt = $pdo->prepare("
+    SELECT points_earned
+    FROM loyalty_points
+    WHERE sale_id = ?
+      AND org_id  = ?
+      AND points_earned > 0
+    LIMIT 1
+");
+$stmt->execute([$sale_id, $sale['org_id']]);
+$earned = (float)$stmt->fetchColumn();
+
+if ($earned > 0) {
+    $stmt = $pdo->prepare("
+        INSERT INTO loyalty_points
+        (org_id, outlet_id, customer_id, sale_id, points_earned, points_redeemed)
+        VALUES (?,?,?,?,?,0)
+    ");
+    $stmt->execute([
+        $sale['org_id'],
+        $sale['outlet_id'],
+        $sale['customer_id'],
+        $return_sale_id,
+        -$earned   // 🔥 NEGATIVE EARN (REVERSAL)
+    ]);
+}
+
 
     $pdo->commit();
 

@@ -163,111 +163,80 @@ try {
     ]);
 
     /* -------------------------------------------------
-       VARIANTS (SAFE REPLACE MODE)
-    ------------------------------------------------- */
-    $variantResponses = [];
+   VARIANTS (SAFE REPLACE MODE) – FINAL
+------------------------------------------------- */
+$variantResponses = [];
 
-    if (isset($input['variants']) && is_array($input['variants'])) {
+if (!empty($input['variants']) && is_array($input['variants'])) {
 
-        // DELETE INVENTORY FIRST
+    // 1️⃣ delete inventory_logs
+    $pdo->prepare("
+        DELETE il FROM inventory_logs il
+        JOIN product_variants pv ON pv.id = il.variant_id
+        WHERE pv.product_id = ?
+    ")->execute([$product_id]);
+
+    // 2️⃣ delete inventory (variant rows)
+    $pdo->prepare("
+        DELETE FROM inventory
+        WHERE product_id=? AND variant_id IS NOT NULL
+    ")->execute([$product_id]);
+
+    // 3️⃣ delete variants
+    $pdo->prepare("
+        DELETE FROM product_variants
+        WHERE product_id=?
+    ")->execute([$product_id]);
+
+    $variantModel = new ProductVariant($pdo);
+
+    foreach ($input['variants'] as $v) {
+
+        if (empty($v['name']) || empty($v['price'])) continue;
+
+        $variant_id = $variantModel->create([
+            'product_id' => $product_id,
+            'name'       => trim($v['name']),
+            'price'      => (float)$v['price'],
+            'gst_rate'   => (float)($v['gst_rate'] ?? 0),
+            'meta'       => '{}'
+        ]);
+
+        // barcode
+        $barcode = !empty($v['barcode'])
+            ? preg_replace('/\s+/', '', $v['barcode'])
+            : generate_barcode($authUser['org_id'], $product_id, $variant_id);
+
+        // update meta
         $pdo->prepare("
-            DELETE FROM inventory
-            WHERE product_id=? AND variant_id IS NOT NULL
-        ")->execute([$product_id]);
+            UPDATE product_variants SET meta=?
+            WHERE id=?
+        ")->execute([
+            json_encode(['barcode' => $barcode], JSON_UNESCAPED_UNICODE),
+            $variant_id
+        ]);
 
-        // DELETE VARIANTS
+        // ✅ INSERT INVENTORY (ONLY ONCE)
         $pdo->prepare("
-            DELETE FROM product_variants
-            WHERE product_id=?
-        ")->execute([$product_id]);
+            INSERT INTO inventory
+            (org_id,outlet_id,product_id,variant_id,quantity,low_stock_limit)
+            VALUES (?,?,?,?,?,?)
+        ")->execute([
+            $authUser['org_id'],
+            $outlet_id,
+            $product_id,
+            $variant_id,
+            (int)($v['quantity'] ?? 0),
+            isset($v['low_stock_limit']) ? (int)$v['low_stock_limit'] : null
+        ]);
 
-        $variantModel = new ProductVariant($pdo);
-
-        foreach ($input['variants'] as $v) {
-            if (empty($v['name']) || empty($v['price'])) continue;
-
-           $variantMeta = [];
-
-/* -----------------------------
-   AUTO META FIELDS (VARIANT)
------------------------------ */
-$variantMetaFields = [
-    'brand',
-    'size',
-    'dealer',
-    'sku',
-    'description',
-    'purchase_price'
-];
-
-foreach ($variantMetaFields as $field) {
-    if (isset($v[$field]) && $v[$field] !== '') {
-        $variantMeta[$field] = $v[$field];
+        $variantResponses[] = [
+            'variant_id' => $variant_id,
+            'name'       => trim($v['name']),
+            'barcode'    => $barcode
+        ];
     }
 }
-
-/* -----------------------------
-   DISCOUNT
------------------------------ */
-if (!empty($v['discount_type']) && !empty($v['discount_value'])) {
-    $variantMeta['discount'] = [
-        'type'  => $v['discount_type'],
-        'value' => (float)$v['discount_value']
-    ];
-}
-
-/* -----------------------------
-   RAW META MERGE (OPTIONAL)
------------------------------ */
-if (!empty($v['meta']) && is_array($v['meta'])) {
-    $variantMeta = array_merge($variantMeta, $v['meta']);
-}
-
-            $variant_id = $variantModel->create([
-                'product_id' => $product_id,
-                'name'       => trim($v['name']),
-                'price'      => (float)$v['price'],
-                'gst_rate'   => (float)($v['gst_rate'] ?? 0),
-                'meta'       => []
-            ]);
-
-            /* VARIANT BARCODE */
-            $variant_barcode = !empty($v['barcode'])
-                ? preg_replace('/\s+/', '', $v['barcode'])
-                : generate_barcode($authUser['org_id'], $product_id, $variant_id);
-
-            $variantMeta['barcode'] = $variant_barcode;
-
-            $pdo->prepare("
-                UPDATE product_variants SET meta=?
-                WHERE id=?
-            ")->execute([
-                json_encode($variantMeta, JSON_UNESCAPED_UNICODE),
-                $variant_id
-            ]);
-
-            $variantResponses[] = [
-                'variant_id' => $variant_id,
-                'name'       => trim($v['name']),
-                'barcode'    => $variant_barcode
-            ];
-
-            $pdo->prepare("
-    INSERT INTO inventory
-    (org_id,outlet_id,product_id,variant_id,quantity,low_stock_limit)
-    VALUES (?,?,?,?,?,?)
-")->execute([
-    $authUser['org_id'],
-    $outlet_id,
-    $product_id,
-    $variant_id,
-    (int)($v['quantity'] ?? 0),
-    isset($v['low_stock_limit']) ? (int)$v['low_stock_limit'] : null
-]);
-
-        }
-    }
-
 
     /* -------------------------------------------------
    UPDATE PRODUCT INVENTORY (LOW STOCK)

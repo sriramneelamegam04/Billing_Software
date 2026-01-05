@@ -235,7 +235,7 @@ $html .= "
 <tr>
     <th>Item</th>
     <th width='10%'>Qty</th>
-    <th width='20%'>Rate</th>
+    <th width='20%'>MRP</th>
 </tr>";
 
 foreach ($items as $i) {
@@ -258,18 +258,18 @@ if ($i['igst'] > 0) {
     }
 
     $html .= "
-    <tr>
-        <td>
-            {$i['product_name']}<br>
-            <span class='small'>
-    MRP {$i['original_rate']} | Disc {$disc}<br>
-    {$gstText}
-</span>
+<tr>
+    <td>
+        {$i['product_name']}<br>
+        <span class='small'>
+            Rate ".number_format($i['final_rate'],2)." | Disc {$disc}<br>
+            {$gstText}
+        </span>
+    </td>
+    <td class='center'>{$i['quantity']}</td>
+    <td class='right'>".number_format($i['original_rate'],2)."</td>
+</tr>";
 
-        </td>
-        <td class='center'>{$i['quantity']}</td>
-        <td class='right'>".number_format($i['final_rate'],2)."</td>
-    </tr>";
 }
 
 /* ---------- TOTALS ---------- */

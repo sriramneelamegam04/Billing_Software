@@ -172,7 +172,7 @@ $stmt->execute([
     $outlet_id,
     $product_id,
     $variant_id,
-    'manual_in',
+    'stock_in',
     $qty,
     $note
 ]);

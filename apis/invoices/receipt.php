@@ -212,8 +212,9 @@ $html .= "
 <tr>
 <td class='left'>Item</td>
 <td>Qty</td>
-<td class='right'>Rate</td>
+<td class='right'>MRP</td>
 </tr>";
+
 foreach ($items as $i) {
 
     $disc = "-";
@@ -221,24 +222,22 @@ foreach ($items as $i) {
         $disc = ($i['discount_type']==='percentage')
             ? $i['discount_value']."%"
             : "₹".number_format($i['discount_value'],2);
-
-            $gstText = '';
-
-if ($i['igst'] > 0) {
-    $gstText = "GST {$i['gst_rate']}% (IGST {$i['gst_rate']}%)";
-} else {
-    $half = $i['gst_rate'] / 2;
-    $gstText = "GST {$i['gst_rate']}% (CGST {$half}% + SGST {$half}%)";
-}
-
     }
 
-   $html .= "
+    $gstText = '';
+    if ($i['igst'] > 0) {
+        $gstText = "GST {$i['gst_rate']}% (IGST {$i['gst_rate']}%)";
+    } else {
+        $half = $i['gst_rate'] / 2;
+        $gstText = "GST {$i['gst_rate']}% (CGST {$half}% + SGST {$half}%)";
+    }
+
+    $html .= "
 <tr>
     <td class='left' style='width:60%'>
         <b>{$i['product_name']}</b><br>
         <span class='small'>
-            MRP ".number_format($i['original_rate'],2)." |
+            Rate ".number_format($i['final_rate'],2)." |
             Disc {$disc}<br>
             {$gstText}
         </span>
@@ -247,11 +246,11 @@ if ($i['igst'] > 0) {
         {$i['quantity']}
     </td>
     <td class='right' style='width:25%'>
-        ".number_format($i['final_rate'],2)."
+        ".number_format($i['original_rate'],2)."
     </td>
 </tr>";
-
 }
+
 $html .= "</table>
 
 <div class='line'></div>";
